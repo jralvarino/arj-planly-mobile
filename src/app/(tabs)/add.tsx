@@ -1,10 +1,10 @@
 import { View, Text } from "react-native";
 
 
-export default function RatingScreen() {
+export default function AddScreen() {
     return (
         <View>
-            <Text>rating</Text>
+            <Text>Add</Text>
         </View>
     )
 }
