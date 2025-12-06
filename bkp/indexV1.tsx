@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from 'expo-router';
 import moment from 'moment';
 import React, { useRef, useState } from 'react';
 
@@ -203,6 +204,29 @@ export function getCalendarColorByHabits(baseColor, completed, total) {
    return rgbToHex(nr, ng, nb);
 }
 
+function headerTitleComponent(date) {
+   // Normaliza tudo para "YYYY-MM-DD"
+   const today = moment().format('YYYY-MM-DD');
+   const yesterday = moment().subtract(1, 'day').format('YYYY-MM-DD');
+   const tomorrow = moment().add(1, 'day').format('YYYY-MM-DD');
+
+   let selectedDate = "Today's";
+
+   if (date) {
+      if (date === today) {
+         selectedDate = "Today's";
+      } else if (date === yesterday) {
+         selectedDate = "Yesterday's";
+      } else if (date === tomorrow) {
+         selectedDate = "Tomorrow's";
+      } else {
+         selectedDate = moment(date).format('MMMM D')
+      }
+   }
+
+   return selectedDate;
+}
+
 export default function HomeScreen() {
    const [habits, setHabits] = useState([
       {
@@ -259,7 +283,7 @@ export default function HomeScreen() {
          streak_count: '100',
          emoji: 'tv',
          time: 'anytime',
-         date: '2025-11-25simu',
+         date: '2025-11-25',
       },
       {
          id: 'h5',
@@ -290,6 +314,7 @@ export default function HomeScreen() {
          date: '2025-11-30',
       },
    ]);
+   const navigation = useNavigation();
 
    const swiper = useRef(null);
    const contentSwiper = useRef(null);
@@ -425,6 +450,11 @@ export default function HomeScreen() {
                                  onPress={() => {
                                     setValue(item.date);
                                     filterHabitsByDate(item.date);
+                                    navigation.setOptions({
+                                       headerTitle: headerTitleComponent(
+                                          moment(item.date).format('YYYY-MM-DD')
+                                       ),
+                                    });
                                  }}
                               >
                                  <View
