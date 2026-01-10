@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback } from 'react';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CalendarWeekView from '../../components/CalendarWeekView';
 import CategoryFilters from '../../components/CategoryFilters';
 import HabitsList from '../../components/HabitsList';
@@ -10,7 +11,7 @@ export default function HomeScreen() {
    const {
       habits,
       week,
-      value,
+         value,
       selectedFilter,
       categories,
       toggleHabit,
@@ -19,6 +20,8 @@ export default function HomeScreen() {
       changeDay,
       changeWeekFromDays,
       setFilter,
+      updateAmount,
+      skipHabit,
       refreshHabits,
    } = useHomeViewModel();
 
@@ -53,6 +56,8 @@ export default function HomeScreen() {
                onToggle={toggleHabit}
                onDayChange={changeDay}
                onWeekChange={changeWeekFromDays}
+               onUpdateAmount={updateAmount}
+               onSkip={skipHabit}
             />
          </View>
       </SafeAreaView>

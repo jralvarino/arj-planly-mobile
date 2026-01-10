@@ -96,59 +96,62 @@ export default function CalendarWeekView({
                            key={dateIndex}
                            onPress={() => onDateSelect(item.date)}
                         >
-                           <View
-                              style={[
-                                 styles.item,
-                                 {
-                                    backgroundColor: getDayColor(item.date),
-                                    borderColor: isToday(item.date)
-                                       ? '#ff6b00'
-                                       : isActive
-                                         ? '#59008c'
-                                         : isDayComplete(item.date)
-                                           ? '#59008c'
-                                           : 'lightgrey',
-                                 },
-                              ]}
-                           >
-                              {isDayComplete(item.date) && (
-                                 <MaterialCommunityIcons
-                                    name="crown"
-                                    size={10}
-                                    color="yellow"
-                                    style={{
-                                       position: 'absolute',
-                                       top: 0,
-                                       right: 1,
-                                    }}
-                                 />
+                           <View style={styles.itemContainer}>
+                              <View
+                                 style={[
+                                    styles.item,
+                                    {
+                                       backgroundColor: getDayColor(item.date),
+                                       borderColor: isActive
+                                          ? '#59008c'
+                                          : isDayComplete(item.date)
+                                            ? '#59008c'
+                                            : 'lightgrey',
+                                    },
+                                 ]}
+                              >
+                                 {isDayComplete(item.date) && (
+                                    <MaterialCommunityIcons
+                                       name="crown"
+                                       size={10}
+                                       color="yellow"
+                                       style={{
+                                          position: 'absolute',
+                                          top: 0,
+                                          right: 1,
+                                       }}
+                                    />
+                                 )}
+
+                                 <Text
+                                    style={[
+                                       styles.itemWeekday,
+                                       {
+                                          color: isDayComplete(item.date)
+                                             ? 'white'
+                                             : 'black',
+                                       },
+                                    ]}
+                                 >
+                                    {item.weekday}
+                                 </Text>
+
+                                 <Text
+                                    style={[
+                                       styles.itemDate,
+                                       {
+                                          color: isDayComplete(item.date)
+                                             ? 'white'
+                                             : 'black',
+                                       },
+                                    ]}
+                                 >
+                                    {item.date.getDate()}
+                                 </Text>
+                              </View>
+                              {isToday(item.date) && (
+                                 <View style={styles.todayIndicator} />
                               )}
-
-                              <Text
-                                 style={[
-                                    styles.itemWeekday,
-                                    {
-                                       color: isDayComplete(item.date)
-                                          ? 'white'
-                                          : 'black',
-                                    },
-                                 ]}
-                              >
-                                 {item.weekday}
-                              </Text>
-
-                              <Text
-                                 style={[
-                                    styles.itemDate,
-                                    {
-                                       color: isDayComplete(item.date)
-                                          ? 'white'
-                                          : 'black',
-                                    },
-                                 ]}
-                              >
-                                 {item.date.getDate()}
-                              </Text>
                            </View>
                         </TouchableWithoutFeedback>
                      );
@@ -168,11 +171,16 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
    },
-   item: {
-      flex: 1,
+   itemContainer: {
       position: 'relative',
+      width: (width - 56) / 7, // (largura total - padding horizontal - margens) / 7 dias
+      alignItems: 'center',
       height: 50,
-      marginHorizontal: 4,
+   },
+   item: {
+      position: 'relative',
+      width: '100%',
+      height: 50,
       paddingVertical: 6,
       paddingHorizontal: 4,
       borderWidth: 1,
@@ -180,6 +188,16 @@ const styles = StyleSheet.create({
       borderColor: '#e3e3e3',
       flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: 'center',
+   },
+   todayIndicator: {
+      position: 'absolute',
+      bottom: -2,
+      alignSelf: 'center',
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#ff4444',
    },
    itemRow: {
       width: width,
@@ -187,6 +205,7 @@ const styles = StyleSheet.create({
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       paddingHorizontal: 3,
+      gap: 4,
    },
    itemWeekday: {
       fontSize: 13,
@@ -200,4 +219,3 @@ const styles = StyleSheet.create({
       color: '#111',
    },
 });
-

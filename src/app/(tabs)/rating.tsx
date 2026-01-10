@@ -1,970 +1,883 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from 'expo-router';
 import moment from 'moment';
-import React, { useRef, useState } from 'react';
-
+import React, { useCallback, useMemo, useState } from 'react';
 import {
    Dimensions,
-   SafeAreaView,
+   Platform,
    ScrollView,
    StyleSheet,
    TouchableOpacity,
-   TouchableWithoutFeedback,
    View,
 } from 'react-native';
-import Emoji from 'react-native-emoji';
 import { Text } from 'react-native-paper';
-import Swiper from 'react-native-swiper';
+import CategoryFilters from '../../components/CategoryFilters';
+import CircularProgress from '../../components/CircularProgress';
+import { Habit } from '../../models/Habit';
+import { getAllCategories } from '../../service/categoryService';
+import { getAllTasks } from '../../service/taskService';
+import { colors } from '../../theme/colors';
+import { getCalendarColorByHabits } from '../../utils/colorUtils';
 
 const { width } = Dimensions.get('window');
+const DAYS_IN_WEEK = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-/** -------------
- * Função para escurecer a cor original (50% mais forte)
- * -------------- */
-// Função auxiliar para converter HEX em RGB
-function hexToRgb(hex) {
-   hex = hex.replace(/^#/, '');
-   if (hex.length === 3) {
-      hex = hex
-         .split('')
-         .map((x) => x + x)
-         .join('');
-   }
-   const num = parseInt(hex, 16);
-   return {
-      r: (num >> 16) & 255,
-      g: (num >> 8) & 255,
-      b: num & 255,
-   };
-}
-
-// Converter RGB para HSL
-function rgbToHsl(r, g, b) {
-   r /= 255;
-   g /= 255;
-   b /= 255;
-   const max = Math.max(r, g, b),
-      min = Math.min(r, g, b);
-   let h,
-      s,
-      l = (max + min) / 2;
-
-   if (max === min) {
-      h = s = 0; // cinza
-   } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-         case r:
-            h = (g - b) / d + (g < b ? 6 : 0);
-            break;
-         case g:
-            h = (b - r) / d + 2;
-            break;
-         case b:
-            h = (r - g) / d + 4;
-            break;
-      }
-      h /= 6;
-   }
-   return { h, s, l };
-}
-
-// Converter HSL para RGB
-function hslToRgb(h, s, l) {
-   let r, g, b;
-
-   if (s === 0) {
-      r = g = b = l; // cinza
-   } else {
-      const hue2rgb = (p, q, t) => {
-         if (t < 0) t += 1;
-         if (t > 1) t -= 1;
-         if (t < 1 / 6) return p + (q - p) * 6 * t;
-         if (t < 1 / 2) return q;
-         if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-         return p;
-      };
-      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      const p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1 / 3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1 / 3);
-   }
-
-   return {
-      r: Math.round(r * 255),
-      g: Math.round(g * 255),
-      b: Math.round(b * 255),
-   };
-}
-
-// Converter RGB para HEX
-function rgbToHex(r, g, b) {
-   return (
-      '#' +
-      [r, g, b]
-         .map((x) => {
-            const hex = x.toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-         })
-         .join('')
+export default function RatingScreen() {
+   const [habits, setHabits] = useState<Habit[]>([]);
+   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+   const [currentMonth, setCurrentMonth] = useState(moment());
+   const [categories, setCategories] = useState<string[]>(['Todas']);
+   const [selectedDate, setSelectedDate] = useState(
+      moment().format('YYYY-MM-DD')
    );
-}
 
-//calendario
-// Converte HEX → {r,g,b}
-function hexToRgbSimple(hex) {
-   hex = hex.replace('#', '');
-   const bigint = parseInt(hex, 16);
-   return {
-      r: (bigint >> 16) & 255,
-      g: (bigint >> 8) & 255,
-      b: bigint & 255,
-   };
-}
-
-// RGB → HEX
-function rgbToHexSimple({ r, g, b }) {
-   return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Mistura 2 cores
- * amount = 0 → corA
- * amount = 1 → corB
- */
-function mixColor(colorA, colorB, amount) {
-   const a = hexToRgbSimple(colorA);
-   const b = hexToRgbSimple(colorB);
-
-   return rgbToHexSimple({
-      r: Math.round(a.r + (b.r - a.r) * amount),
-      g: Math.round(a.g + (b.g - a.g) * amount),
-      b: Math.round(a.b + (b.b - a.b) * amount),
-   });
-}
-
-/**
- * ★ NOVA FUNÇÃO:
- * Deixa a cor mais forte conforme o número de hábitos completos
- *
- * completed = quantos hábitos completos no dia
- * total      = habits.length
- */
-export function getCalendarColor(baseColor, completed, total) {
-   if (total === 0) return baseColor;
-
-   const intensity = completed / total; // 0 → 1
-
-   // 0 = original, 1 = MUITO mais forte
-   const MAX_STRENGTH = 0.6; // ajuste aqui (0.3 para suave, 1 para máximo)
-
-   const amount = intensity * MAX_STRENGTH;
-
-   return mixColor(baseColor, '#000000', amount);
-}
-
-// Função principal: deixar a cor mais forte
-export function makeColorStronger(hexColor) {
-   const { r, g, b } = hexToRgb(hexColor);
-   let { h, s, l } = rgbToHsl(r, g, b);
-
-   // Aumenta saturação em 20% (sem passar de 1)
-   s = Math.min(1, s * 1.2);
-
-   // Diminui a luminosidade em 10% (sem passar de 0)
-   l = Math.max(0, l * 0.9);
-
-   const { r: nr, g: ng, b: nb } = hslToRgb(h, s, l);
-   return rgbToHex(nr, ng, nb);
-}
-
-export function getCalendarColorByHabits(baseColor, completed, total) {
-   if (total === 0 || completed === 0) return 'white';
-
-   if (total === completed) {
-      return '#59008c';
-   }
-
-   const range = completed / total; // 0 → 1
-
-   // Converte a cor base
-   const { r, g, b } = hexToRgb(baseColor);
-   let { h, s, l } = rgbToHsl(r, g, b);
-
-   // AUMENTO progressivo da saturação
-   s = Math.min(1, s + range * 0.6);
-
-   // DIMINUI levemente a luminosidade quanto mais completo
-   l = Math.max(0, l - range * 0.25);
-
-   const { r: nr, g: ng, b: nb } = hslToRgb(h, s, l);
-   return rgbToHex(nr, ng, nb);
-}
-
-export default function HomeScreen() {
-   const [habits, setHabits] = useState([
-      {
-         id: 'h1',
-         title: 'Anki',
-         amount: '0/50',
-         streakCount: 1,
-         frequency: 'English',
-         completed: true,
-         color: '#f3eafe',
-         description: 'asdfg',
-         streak_count: '1',
-         emoji: 'book',
-         time: '22:00',
-         date: '2025-12-01',
-      },
-      {
-         id: 'h2',
-         title: 'Serie com legendas em Inglês',
-         amount: '0/1',
-         streakCount: 3,
-         frequency: 'English',
-         completed: true,
-         color: '#D8FFFB',
-         description: 'arrewerwef',
-         streak_count: '5',
-         emoji: 'camera',
-         time: 'night',
-         date: '2025-12-02',
-      },
-      {
-         id: 'h3',
-         title: 'Academia',
-         amount: '0/1',
-         streakCount: 3,
-         frequency: 'Healthy',
-         completed: false,
-         color: '#d6fce9',
-         description: 'arrewerwef',
-         streak_count: '30',
-         emoji: 'airplane',
-         time: 'anytime',
-         date: '2025-12-02',
-      },
-      {
-         id: 'h4',
-         title: 'Kindle',
-         amount: '0/3 pg',
-         streakCount: 3,
-         frequency: 'English',
-         completed: true,
-         color: '#ffe4e6',
-         description: 'arrewerwef',
-         streak_count: '100',
-         emoji: 'tv',
-         time: 'anytime',
-         date: '2025-11-25simu',
-      },
-      {
-         id: 'h5',
-         title: 'asdf',
-         amount: '0/3 pg',
-         streakCount: 3,
-         frequency: 'Home',
-         completed: false,
-         color: '#ffe4e6',
-         description: 'arrewerwef',
-         streak_count: '100',
-         emoji: 'tv',
-         time: 'anytime',
-         date: '2025-11-30',
-      },
-      {
-         id: 'h6',
-         title: 'asdf 1',
-         amount: '0/3 pg',
-         streakCount: 3,
-         frequency: 'Home',
-         completed: true,
-         color: '#ffe4e6',
-         description: 'arrewerwef',
-         streak_count: '100',
-         emoji: 'tv',
-         time: 'anytime',
-         date: '2025-11-30',
-      },
-   ]);
-
-   const swiper = useRef(null);
-   const contentSwiper = useRef(null);
-   const [week, setWeek] = useState(0);
-   const [value, setValue] = useState(new Date());
-   const [filteredHabits, setFilteredHabits] = useState(habits);
-
-   /** Toggle usando o ID */
-   const onToggle = (id) => {
-      setHabits((prev) =>
-         prev.map((h) => {
-            if (h.id === id) {
-               if (!h.completed) {
-                  Haptics.notificationAsync(
-                     Haptics.NotificationFeedbackType.Success
-                  );
-               }
-               return { ...h, completed: !h.completed };
+   // Carregar categorias e hábitos
+   useFocusEffect(
+      useCallback(() => {
+         const loadData = async () => {
+            try {
+               const [tasks, cats] = await Promise.all([
+                  getAllTasks(),
+                  getAllCategories(),
+               ]);
+               setHabits(tasks);
+               setCategories(['Todas', ...cats.map((c) => c.name)]);
+            } catch (error) {
+               console.error('Error loading data:', error);
             }
-            return h;
-         })
-      );
-   };
-
-   /** Semanas */
-   const weeks = React.useMemo(() => {
-      const start = moment().add(week, 'weeks').startOf('week');
-      return [-1, 0, 1].map((adj) =>
-         Array.from({ length: 7 }).map((_, index) => {
-            const date = moment(start).add(adj, 'week').add(index, 'day');
-            return { weekday: date.format('ddd'), date: date.toDate() };
-         })
-      );
-   }, [week]);
-
-   /** Dias anteriores / atual / posterior */
-   const days = React.useMemo(() => {
-      return [
-         moment(value).subtract(1, 'day').toDate(),
-         value,
-         moment(value).add(1, 'day').toDate(),
-      ];
-   }, [value]);
-
-   const selectedDay = moment(value).format('YYYY-MM-DD');
-
-   const habitsOfDay = habits.filter((h) => h.date === selectedDay);
-
-   const completedToday = habitsOfDay.filter((h) => h.completed).length;
-   const totalToday = habitsOfDay.length;
-
-   const dayColor = getCalendarColorByHabits(
-      '#F4E9FF',
-      completedToday,
-      totalToday
+         };
+         loadData();
+      }, [])
    );
 
-   const [selectedFilter, setSelectedFilter] = useState(null);
+   // Filtrar hábitos por categoria
+   const filteredHabits = useMemo(() => {
+      if (!selectedFilter || selectedFilter === 'Todas') {
+         return habits;
+      }
+      return habits.filter((h) => h.frequency === selectedFilter);
+   }, [habits, selectedFilter]);
 
-   const categories = ['English', 'Health', 'Home'];
+   // Obter todos os dias do mês atual
+   const monthDays = useMemo(() => {
+      const start = currentMonth.clone().startOf('month');
+      const end = currentMonth.clone().endOf('month');
+      const days: Array<{ date: moment.Moment; isCurrentMonth: boolean }> = [];
 
-   function filterHabitsByDate(date) {
-      const target = moment(date).format('YYYY-MM-DD');
+      // Adicionar dias do mês anterior para completar a primeira semana
+      const firstDayOfWeek = start.day();
+      for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+         days.push({
+            date: start.clone().subtract(i + 1, 'days'),
+            isCurrentMonth: false,
+         });
+      }
 
-      const filtered = habits.filter((h) => h.date === target);
+      // Adicionar todos os dias do mês atual
+      let current = start.clone();
+      while (current.isSameOrBefore(end, 'day')) {
+         days.push({ date: current.clone(), isCurrentMonth: true });
+         current.add(1, 'day');
+      }
 
-      setFilteredHabits(filtered);
-   }
+      // Adicionar dias do próximo mês para completar a última semana
+      const lastDayOfWeek = end.day();
+      const daysToAdd = 6 - lastDayOfWeek;
+      for (let i = 1; i <= daysToAdd; i++) {
+         days.push({
+            date: end.clone().add(i, 'days'),
+            isCurrentMonth: false,
+         });
+      }
 
-   function isDayComplete(date) {
-      const selectedDay = moment(date).format('YYYY-MM-DD');
+      return days;
+   }, [currentMonth]);
 
-      const habitsOfDay = habits.filter(
-         (h) => moment(h.date).format('YYYY-MM-DD') === selectedDay
+   // Verificar se um dia está completo
+   const isDayComplete = useCallback(
+      (date: moment.Moment) => {
+         const dateStr = date.format('YYYY-MM-DD');
+         const habitsOfDay = filteredHabits.filter(
+            (h) => moment(h.date).format('YYYY-MM-DD') === dateStr
+         );
+
+         if (habitsOfDay.length === 0) return false;
+
+         // Se há filtro de categoria específica, verificar se todos os hábitos daquela categoria estão completos
+         if (selectedFilter && selectedFilter !== 'Todas') {
+            return habitsOfDay.every((h) => h.completed);
+         }
+
+         // Se não há filtro (ou "Todas"), verificar se todos os hábitos do dia estão completos
+         // Isso significa que todas as categorias presentes no dia devem estar completas
+         return habitsOfDay.every((h) => h.completed);
+      },
+      [filteredHabits, selectedFilter]
+   );
+
+   // Obter cor do dia
+   const getDayColor = useCallback(
+      (date: moment.Moment) => {
+         const dateStr = date.format('YYYY-MM-DD');
+         const habitsOfDay = filteredHabits.filter(
+            (h) => moment(h.date).format('YYYY-MM-DD') === dateStr
+         );
+
+         if (habitsOfDay.length === 0) return 'white';
+
+         const completed = habitsOfDay.filter((h) => h.completed).length;
+         const total = habitsOfDay.length;
+
+         return getCalendarColorByHabits('#F4E9FF', completed, total);
+      },
+      [filteredHabits]
+   );
+
+   // Calcular métricas
+   const metrics = useMemo(() => {
+      const now = moment();
+      const monthStart = now.clone().startOf('month');
+      const monthEnd = now.clone().endOf('month');
+
+      // Filtrar hábitos do mês atual
+      const monthHabits = filteredHabits.filter((h) => {
+         const habitDate = moment(h.date);
+         return (
+            habitDate.isSameOrAfter(monthStart, 'day') &&
+            habitDate.isSameOrBefore(monthEnd, 'day')
+         );
+      });
+
+      // Monthly Rate: porcentagem de hábitos completados no mês
+      const totalHabits = monthHabits.length;
+      const completedHabits = monthHabits.filter((h) => h.completed).length;
+      const monthlyRate =
+         totalHabits > 0
+            ? Math.round((completedHabits / totalHabits) * 100)
+            : 0;
+
+      // Streaks: dias consecutivos completados (até hoje, contando apenas dias com hábitos)
+      let currentStreak = 0;
+      let checkDate = now.clone();
+      let foundFirstDay = false;
+
+      while (checkDate.isSameOrAfter(monthStart, 'day')) {
+         const dateStr = checkDate.format('YYYY-MM-DD');
+         const habitsOfDay = filteredHabits.filter(
+            (h) => moment(h.date).format('YYYY-MM-DD') === dateStr
+         );
+
+         if (habitsOfDay.length === 0) {
+            // Se não há hábitos no dia e já encontramos pelo menos um dia, quebra o streak
+            if (foundFirstDay) {
+               break;
+            }
+            // Se ainda não encontramos o primeiro dia, continua procurando
+            checkDate.subtract(1, 'day');
+            continue;
+         }
+
+         foundFirstDay = true;
+         // Verificar se todos os hábitos do dia estão completos
+         const allComplete = habitsOfDay.every((h) => h.completed);
+         if (allComplete) {
+            currentStreak++;
+            checkDate.subtract(1, 'day');
+         } else {
+            break;
+         }
+      }
+
+      // Perfect Days: dias onde todos os hábitos foram completados
+      let perfectDays = 0;
+      let checkDate2 = monthStart.clone();
+      while (checkDate2.isSameOrBefore(monthEnd, 'day')) {
+         const dateStr = checkDate2.format('YYYY-MM-DD');
+         const habitsOfDay = filteredHabits.filter(
+            (h) => moment(h.date).format('YYYY-MM-DD') === dateStr
+         );
+
+         if (habitsOfDay.length > 0) {
+            const allComplete = habitsOfDay.every((h) => h.completed);
+            if (allComplete) {
+               perfectDays++;
+            }
+         }
+         checkDate2.add(1, 'day');
+      }
+
+      // Habits Done: total de hábitos completados no mês
+      const habitsDone = completedHabits;
+
+      // Daily Average: média de hábitos completados por dia
+      const daysWithHabits = new Set(
+         monthHabits.map((h) => moment(h.date).format('YYYY-MM-DD'))
+      ).size;
+      const dailyAverage =
+         daysWithHabits > 0
+            ? (completedHabits / daysWithHabits).toFixed(1)
+            : '0.0';
+
+      // Totais: completos, missed e skipped
+      const totalCompleted = completedHabits;
+      const totalSkipped = monthHabits.filter((h) => h.skipped).length;
+      const totalMissed = monthHabits.filter(
+         (h) => !h.completed && !h.skipped
+      ).length;
+
+      return {
+         monthlyRate,
+         currentStreak,
+         perfectDays,
+         habitsDone,
+         dailyAverage,
+         totalCompleted,
+         totalSkipped,
+         totalMissed,
+      };
+   }, [filteredHabits]);
+
+   const navigateMonth = (direction: 'prev' | 'next') => {
+      setCurrentMonth((prev) =>
+         direction === 'prev'
+            ? prev.clone().subtract(1, 'month')
+            : prev.clone().add(1, 'month')
       );
-
-      if (habitsOfDay.length === 0) return false; // sem hábitos no dia → sem estrela
-
-      return habitsOfDay.every((h) => h.completed);
-   }
-
-   const isToday = (day) => moment(day).isSame(moment(), 'day');
-
-   const getDayColor = (date) => {
-      const selectedDay = moment(date).format('YYYY-MM-DD');
-
-      const habitsOfDay = habits.filter(
-         (h) => moment(h.date).format('YYYY-MM-DD') === selectedDay
-      );
-      const habitsCompletedToday = habitsOfDay.filter(
-         (h) => h.completed === true
-      );
-
-      const colorOfTheDay = getCalendarColorByHabits(
-         '#F4E9FF',
-         habitsCompletedToday.length,
-         habitsOfDay.length
-      );
-
-      return colorOfTheDay;
    };
 
    return (
-      <SafeAreaView style={{ flex: 1 }}>
-         <View style={styles.container}>
-            {/* ============================
-               CALENDÁRIO
-            ============================= */}
-            <View style={styles2.picker}>
-               <Swiper
-                  index={1}
-                  ref={swiper}
-                  loop={false}
-                  showsPagination={false}
-                  onIndexChanged={(ind) => {
-                     if (ind === 1) return;
-                     const index = ind - 1;
-                     setValue(moment(value).add(index, 'week').toDate());
-                     setTimeout(() => {
-                        setWeek((w) => w + index);
-                        swiper.current.scrollTo(1, false);
-                     }, 10);
-                  }}
-               >
-                  {weeks.map((dates, index) => (
-                     <View style={styles2.itemRow} key={index}>
-                        {dates.map((item, dateIndex) => {
-                           const isActive =
-                              value.toDateString() === item.date.toDateString();
-                           return (
-                              <TouchableWithoutFeedback
-                                 key={dateIndex}
-                                 onPress={() => {
-                                    setValue(item.date);
-                                    filterHabitsByDate(item.date);
-                                 }}
-                              >
-                                 <View
-                                    style={[
-                                       styles2.item,
-                                       {
-                                          backgroundColor: getDayColor(
-                                             item.date
-                                          ),
-                                          borderColor: isToday(item.date)
-                                             ? '#ff6b00'
-                                             : isActive
-                                               ? '#59008c'
-                                               : isDayComplete(item.date)
-                                                 ? '#59008c'
-                                                 : 'lightgrey',
-                                       },
-                                    ]}
-                                 >
-                                    {isDayComplete(item.date) && (
-                                       <MaterialCommunityIcons
-                                          name="crown"
-                                          size={10}
-                                          color="yellow"
-                                          style={{
-                                             position: 'absolute',
-                                             top: 0,
-                                             right: 1,
-                                          }}
-                                       />
-                                    )}
-
-                                    <Text
-                                       style={[
-                                          styles2.itemWeekday,
-                                          {
-                                             color: isDayComplete(item.date)
-                                                ? 'white'
-                                                : 'black',
-                                          },
-                                       ]}
-                                    >
-                                       {item.weekday}
-                                    </Text>
-
-                                    <Text
-                                       style={[
-                                          styles2.itemDate,
-                                          {
-                                             color: isDayComplete(item.date)
-                                                ? 'white'
-                                                : 'black',
-                                          },
-                                       ]}
-                                    >
-                                       {item.date.getDate()}
-                                    </Text>
-                                 </View>
-                              </TouchableWithoutFeedback>
-                           );
-                        })}
-                     </View>
-                  ))}
-               </Swiper>
+      <ScrollView
+         style={styles.container}
+         contentContainerStyle={styles.scrollContent}
+         showsVerticalScrollIndicator={false}
+      >
+         <View style={styles.content}>
+            {/* Categoria Filters */}
+            <View style={styles.section}>
+               <CategoryFilters
+                  categories={categories}
+                  selectedFilter={selectedFilter}
+                  onFilterChange={setSelectedFilter}
+               />
             </View>
 
-            <View>
-               {/* ============================
-   FILTROS DE CATEGORIA
-============================= */}
-               <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{
-                     paddingHorizontal: 10,
-                     marginTop: 4,
-                  }}
-               >
-                  <View style={{ flexDirection: 'row', gap: 5 }}>
-                     {categories.map((cat) => {
-                        const isActive = selectedFilter === cat;
+            {/* Calendário Mensal */}
+            <View style={styles.section}>
+               <View style={styles.calendarCard}>
+                  <View style={styles.calendarHeader}>
+                     <TouchableOpacity
+                        onPress={() => navigateMonth('prev')}
+                        style={styles.monthNavButton}
+                     >
+                        <MaterialCommunityIcons
+                           name="chevron-left"
+                           size={24}
+                           color={colors.primary}
+                        />
+                     </TouchableOpacity>
+                     <Text style={styles.monthTitle}>
+                        {currentMonth.format('MMMM YYYY')}
+                     </Text>
+                     <TouchableOpacity
+                        onPress={() => navigateMonth('next')}
+                        style={styles.monthNavButton}
+                     >
+                        <MaterialCommunityIcons
+                           name="chevron-right"
+                           size={24}
+                           color={colors.primary}
+                        />
+                     </TouchableOpacity>
+                  </View>
+
+                  {/* Dias da semana */}
+                  <View style={styles.weekDaysRow}>
+                     {DAYS_IN_WEEK.map((day) => (
+                        <View key={day} style={styles.weekDayHeader}>
+                           <Text style={styles.weekDayText}>{day}</Text>
+                        </View>
+                     ))}
+                  </View>
+
+                  {/* Grid de dias */}
+                  <View style={styles.calendarGrid}>
+                     {monthDays.map((day, index) => {
+                        const isComplete = isDayComplete(day.date);
+                        const dayColor = getDayColor(day.date);
+                        const isToday = day.date.isSame(moment(), 'day');
+
+                        const dayString = day.date.format('YYYY-MM-DD');
+                        const isSelected = dayString === selectedDate;
+
                         return (
                            <TouchableOpacity
-                              key={cat}
-                              onPress={() =>
-                                 setSelectedFilter(isActive ? null : cat)
-                              }
+                              key={index}
+                              onPress={() => setSelectedDate(dayString)}
                               style={[
-                                 stylesFilter.tag,
-                                 isActive && stylesFilter.tagActive,
+                                 styles.calendarDay,
+                                 !day.isCurrentMonth &&
+                                    styles.calendarDayOtherMonth,
                               ]}
                            >
-                              <Text
+                              {isComplete && (
+                                 <MaterialCommunityIcons
+                                    name="trophy"
+                                    size={12}
+                                    color="orange"
+                                    style={styles.trophyIcon}
+                                 />
+                              )}
+                              <View
                                  style={[
-                                    stylesFilter.tagText,
-                                    isActive && stylesFilter.tagTextActive,
+                                    styles.dayContent,
+                                    {
+                                       backgroundColor: dayColor,
+                                       borderColor: isSelected
+                                          ? colors.primary
+                                          : isComplete
+                                            ? colors.primary
+                                            : colors.gray[200],
+                                       borderWidth:
+                                          isSelected || isComplete ? 2 : 1,
+                                    },
                                  ]}
                               >
-                                 {cat}
-                              </Text>
+                                 <Text
+                                    style={[
+                                       styles.dayNumber,
+                                       !day.isCurrentMonth &&
+                                          styles.dayNumberOtherMonth,
+                                       isComplete && styles.dayNumberComplete,
+                                    ]}
+                                 >
+                                    {day.date.date()}
+                                 </Text>
+                              </View>
+                              {isToday && (
+                                 <View style={styles.todayIndicator} />
+                              )}
                            </TouchableOpacity>
                         );
                      })}
                   </View>
-               </ScrollView>
+               </View>
             </View>
 
-            {/* ============================
-               PÁGINAS (ontem / hoje / amanhã)
-            ============================= */}
-            <Swiper
-               index={1}
-               ref={contentSwiper}
-               loop={false}
-               showsPagination={false}
-               onIndexChanged={(ind) => {
-                  if (ind === 1) return;
-                  setTimeout(() => {
-                     const nextValue = moment(value).add(ind - 1, 'days');
-                     if (moment(value).week() !== nextValue.week()) {
-                        setWeek((w) =>
-                           moment(value).isBefore(nextValue) ? w + 1 : w - 1
+            {/* Métricas */}
+            <View style={styles.metricsContainer}>
+               <View style={styles.metricsRow}>
+                  <View style={styles.metricCard}>
+                     <View style={styles.circularProgressContainer}>
+                        <CircularProgress
+                           percentage={metrics.monthlyRate}
+                           size={100}
+                           strokeWidth={8}
+                           showLabel={true}
+                        />
+                     </View>
+                     <Text style={styles.metricLabel}>Monthly Rate</Text>
+                  </View>
+                  <View style={styles.metricCard}>
+                     <MaterialCommunityIcons
+                        name="fire"
+                        size={40}
+                        color={colors.primary}
+                        style={styles.metricIcon}
+                     />
+                     <Text style={styles.metricValue}>
+                        {metrics.currentStreak}
+                     </Text>
+                     <Text style={styles.metricLabel}>Streaks</Text>
+                  </View>
+               </View>
+
+               <View style={styles.metricsRow}>
+                  <View style={styles.metricCard}>
+                     <MaterialCommunityIcons
+                        name="trophy"
+                        size={40}
+                        color={colors.primary}
+                        style={styles.metricIcon}
+                     />
+                     <Text style={styles.metricValue}>
+                        {metrics.perfectDays}
+                     </Text>
+                     <Text style={styles.metricLabel}>Perfect Days</Text>
+                  </View>
+                  <View style={styles.metricCard}>
+                     <MaterialCommunityIcons
+                        name="check-circle"
+                        size={40}
+                        color={colors.primary}
+                        style={styles.metricIcon}
+                     />
+                     <Text style={styles.metricValue}>
+                        {metrics.habitsDone}
+                     </Text>
+                     <Text style={styles.metricLabel}>Habits Done</Text>
+                  </View>
+               </View>
+
+               <View style={styles.metricsRow}>
+                  <View style={[styles.metricCard, styles.metricCardFull]}>
+                     <View style={styles.dailyAverageSection}>
+                        <MaterialCommunityIcons
+                           name="chart-line"
+                           size={40}
+                           color={colors.primary}
+                           style={styles.metricIcon}
+                        />
+                        <Text style={styles.metricValue}>
+                           {metrics.dailyAverage}
+                        </Text>
+                        <Text style={styles.metricLabel}>Daily Average</Text>
+                     </View>
+                     <View style={styles.totalsContainer}>
+                        <View style={styles.totalItem}>
+                           <View style={styles.totalBadgeDone}>
+                              <Text style={styles.totalBadgeText}>
+                                 {metrics.totalCompleted}
+                              </Text>
+                           </View>
+                           <Text style={styles.totalLabel}>Done</Text>
+                        </View>
+                        <View style={styles.totalItem}>
+                           <View style={styles.totalBadgeMissed}>
+                              <Text style={styles.totalBadgeText}>
+                                 {metrics.totalMissed}
+                              </Text>
+                           </View>
+                           <Text style={styles.totalLabel}>Missed</Text>
+                        </View>
+                        <View style={styles.totalItem}>
+                           <View style={styles.totalBadgeSkipped}>
+                              <Text
+                                 style={[
+                                    styles.totalBadgeText,
+                                    styles.totalBadgeTextDark,
+                                 ]}
+                              >
+                                 {metrics.totalSkipped}
+                              </Text>
+                           </View>
+                           <Text style={styles.totalLabel}>Skipped</Text>
+                        </View>
+                     </View>
+                  </View>
+               </View>
+            </View>
+
+            {/* Hábitos do Dia Selecionado */}
+            <View style={styles.section}>
+               <View style={styles.habitsCard}>
+                  <Text style={styles.habitsSectionTitle}>
+                     Hábitos do dia {moment(selectedDate).format('DD/MM/YYYY')}
+                  </Text>
+                  {(() => {
+                     const dayHabits = filteredHabits.filter(
+                        (h) =>
+                           moment(h.date).format('YYYY-MM-DD') === selectedDate
+                     );
+
+                     if (dayHabits.length === 0) {
+                        return (
+                           <View style={styles.emptyHabitsContainer}>
+                              <MaterialCommunityIcons
+                                 name="calendar-blank-outline"
+                                 size={48}
+                                 color={colors.gray[300]}
+                              />
+                              <Text style={styles.emptyHabitsText}>
+                                 Nenhum hábito para este dia
+                              </Text>
+                           </View>
                         );
                      }
-                     setValue(nextValue.toDate());
-                     contentSwiper.current.scrollTo(1, false);
-                  }, 10);
-               }}
-            >
-               {days.map((day, index) => (
-                  <View key={index} style={pageStyles.page}>
-                     <ScrollView showsVerticalScrollIndicator={false}>
-                        {habitsOfDay
-                           .filter(
-                              (h) =>
-                                 !selectedFilter ||
-                                 h.frequency === selectedFilter
-                           )
-                           .filter(
-                              (h) =>
-                                 !selectedFilter ||
-                                 h.frequency === selectedFilter
-                           )
-                           .map((habit) => {
-                              const initialColor = habit.color;
-                              const checkedColor = makeColorStronger(
-                                 habit.color
-                              );
+
+                     return (
+                        <View style={styles.habitsList}>
+                           {dayHabits.map((habit) => {
+                              let statusTag = null;
+                              if (habit.completed) {
+                                 statusTag = (
+                                    <View style={styles.statusTagDone}>
+                                       <Text style={styles.statusTagTextDone}>
+                                          Done
+                                       </Text>
+                                    </View>
+                                 );
+                              } else if (habit.skipped) {
+                                 statusTag = (
+                                    <View style={styles.statusTagSkipped}>
+                                       <Text
+                                          style={styles.statusTagTextSkipped}
+                                       >
+                                          Skipped
+                                       </Text>
+                                    </View>
+                                 );
+                              } else {
+                                 statusTag = (
+                                    <View style={styles.statusTagMissed}>
+                                       <Text style={styles.statusTagTextMissed}>
+                                          Missed
+                                       </Text>
+                                    </View>
+                                 );
+                              }
 
                               return (
-                                 <View style={styles3.container} key={habit.id}>
+                                 <View key={habit.id} style={styles.habitItem}>
                                     <View
                                        style={[
-                                          styles3.card,
-                                          {
-                                             backgroundColor: habit.completed
-                                                ? checkedColor
-                                                : initialColor,
-                                          },
+                                          styles.habitColorIndicator,
+                                          { backgroundColor: habit.color },
                                        ]}
-                                    >
-                                       {/* Emoji */}
-                                       <View style={styles3.colEmoji}>
-                                          <Emoji
-                                             style={styles3.emoji}
-                                             name={habit.emoji}
-                                          />
-                                       </View>
-
-                                       {/* Título + Tags */}
-                                       <View style={styles3.colText}>
-                                          <Text style={styles3.title}>
+                                    />
+                                    <View style={styles.habitInfo}>
+                                       <View style={styles.habitHeader}>
+                                          <Text style={styles.habitTitle}>
                                              {habit.title}
                                           </Text>
-
-                                          <View style={styles3.tagsRow}>
-                                             <View style={styles3.tag}>
-                                                <Text style={styles3.tagText}>
-                                                   {habit.amount}
-                                                </Text>
-                                             </View>
-
-                                             <View style={styles3.tag}>
-                                                <Text style={styles3.tagText}>
-                                                   {habit.time}
-                                                </Text>
-                                             </View>
-                                          </View>
+                                          {statusTag}
                                        </View>
-
-                                       {/* BOTÃO DE CHECK */}
-                                       <TouchableOpacity
-                                          style={styles3.colButton}
-                                          onPress={() => onToggle(habit.id)}
-                                       >
+                                       {habit.amount && (
+                                          <Text style={styles.habitAmount}>
+                                             {habit.amount}
+                                          </Text>
+                                       )}
+                                       {habit.notes && (
                                           <View
-                                             style={[
-                                                styles3.checkButton,
-                                                habit.completed &&
-                                                   styles3.checkButtonOn,
-                                             ]}
+                                             style={styles.habitNotesContainer}
                                           >
-                                             {habit.completed && (
-                                                <MaterialCommunityIcons
-                                                   name="check"
-                                                   size={16}
-                                                   color="#FFF"
-                                                />
-                                             )}
+                                             <MaterialCommunityIcons
+                                                name="note-text-outline"
+                                                size={14}
+                                                color={colors.primary}
+                                             />
+                                             <Text style={styles.habitNotes}>
+                                                {habit.notes}
+                                             </Text>
                                           </View>
-                                       </TouchableOpacity>
+                                       )}
                                     </View>
                                  </View>
                               );
                            })}
-                     </ScrollView>
-                  </View>
-               ))}
-            </Swiper>
+                        </View>
+                     );
+                  })()}
+               </View>
+            </View>
          </View>
-      </SafeAreaView>
+      </ScrollView>
    );
 }
-const styles3 = StyleSheet.create({
-   container: {
-      paddingHorizontal: 2,
-   },
-
-   card: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 7,
-      borderRadius: 12,
-      gap: 7,
-      marginBottom: 12,
-
-      // Sombra suave
-      elevation: 4,
-      shadowColor: '#000',
-      shadowOpacity: 0.08,
-      shadowRadius: 5,
-      shadowOffset: { width: 0, height: 2 },
-   },
-
-   // 👉 Cor inicial super clara
-   cardInitial: {
-      backgroundColor: '#E7F2FF',
-   },
-
-   // 👉 Cor mais forte quando concluído
-   cardChecked: {
-      backgroundColor: '#BBDFFF',
-   },
-
-   colEmoji: {
-      width: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-   },
-
-   emoji: {
-      fontSize: 20,
-   },
-
-   colText: {
-      flex: 1,
-   },
-
-   title: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginBottom: 6,
-   },
-
-   /** TAGS */
-   tagsRow: {
-      flexDirection: 'row',
-      gap: 5,
-   },
-
-   tag: {
-      backgroundColor: 'rgba(0,0,0,0.06)',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-   },
-
-   tagText: {
-      fontSize: 9,
-      color: '#333',
-      fontWeight: '500',
-   },
-
-   colButton: {
-      padding: 6,
-   },
-
-   checkButton: {
-      width: 22,
-      height: 22,
-      borderRadius: 13,
-      borderWidth: 2,
-      borderColor: '#4CAF50',
-      justifyContent: 'center',
-      alignItems: 'center',
-   },
-
-   checkButtonOn: {
-      backgroundColor: '#4CAF50',
-      borderColor: '#4CAF50',
-   },
-});
 
 const styles = StyleSheet.create({
-   teste: {
-      flexDirection: 'column',
-   },
    container: {
       flex: 1,
-      paddingVertical: 1,
-      backgroundColor: 'white',
+      backgroundColor: colors.background,
    },
-
-   card: {
-      marginBottom: 12,
-      borderRadius: 15,
-      shadowRadius: 20,
-      elevation: 9,
+   scrollContent: {
+      paddingBottom: 100, // Espaço para o botão de adicionar na tab bar
    },
-   cardCheck: {
+   content: {
+      padding: 16,
+   },
+   section: {
+      marginBottom: 24,
+   },
+   calendarCard: {
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 16,
+      ...Platform.select({
+         ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+         },
+         android: {
+            elevation: 4,
+         },
+      }),
+   },
+   calendarHeader: {
       flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      marginRight: 12,
+      marginBottom: 16,
+      paddingHorizontal: 8,
    },
-   cardCompleted: {
-      opacity: 0.4,
+   monthNavButton: {
+      padding: 8,
    },
-   notCompleted: {
-      opacity: 1,
+   monthTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text.title,
+      textTransform: 'capitalize',
    },
-   cardContent: {
-      padding: 5,
+   weekDaysRow: {
+      flexDirection: 'row',
+      marginBottom: 8,
    },
-   cardTitle: {
+   weekDayHeader: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8,
+   },
+   weekDayText: {
       fontSize: 12,
-      fontWeight: 'bold',
-      marginTop: 5,
-      marginBottom: 2,
-      marginLeft: 10,
-      color: 'black',
-   },
-   cardDescription: {
-      fontSize: 9,
-      marginBottom: 7,
-      color: '#6c6c80',
-      marginLeft: 10,
-      borderWidth: 0.2,
-      borderColor: 'lightgrey',
-      borderRadius: 12,
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-      alignItems: 'center',
-   },
-   cardFooter: {
-      flexDirection: 'row',
-      gap: 3,
-      alignItems: 'center',
-   },
-   streakBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#fff3e0',
-      borderRadius: 12,
-      paddingHorizontal: 7,
-      paddingVertical: 1,
-      marginLeft: 10,
-   },
-   checkUncheck: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'green',
-      borderRadius: 20,
-      paddingHorizontal: 5,
-      paddingVertical: 4,
-      marginLeft: 10,
-      borderColor: 'lightgrey',
-      borderWidth: 0.2,
-   },
-   streakText: {
-      marginLeft: 1,
-      color: '#ff9800',
-      fontWeight: 'bold',
-      fontSize: 10,
-   },
-   frequencyBadge: {
-      backgroundColor: '#ede7f6',
-      borderRadius: 12,
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-   },
-   frequencyText: {
-      color: '#7c4dff',
-      fontWeight: 'bold',
-      fontSize: 10,
-   },
-});
-
-const styles2 = StyleSheet.create({
-   container: {
-      flex: 1,
-      paddingVertical: 24,
-   },
-   header: {
-      paddingHorizontal: 16,
-   },
-   title: {
-      fontSize: 32,
-      fontWeight: '700',
-      color: '#1d1d1d',
-      marginBottom: 12,
-   },
-   picker: {
-      flex: 1,
-      maxHeight: 74,
-      paddingVertical: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-   },
-   subtitle: {
-      fontSize: 17,
       fontWeight: '600',
-      color: '#999999',
-      marginBottom: 12,
+      color: colors.text.body,
    },
-   footer: {
-      marginTop: 'auto',
-      paddingHorizontal: 16,
+   calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
    },
-   /** Item */
-   item: {
-      flex: 1,
+   calendarDay: {
+      width: width / 7 - 12,
+      aspectRatio: 1,
+      padding: 6,
       position: 'relative',
-      height: 50,
-      marginHorizontal: 4,
-      paddingVertical: 6,
-      paddingHorizontal: 4,
-      borderWidth: 1,
+   },
+   calendarDayOtherMonth: {
+      opacity: 0.3,
+   },
+   dayContent: {
+      flex: 1,
       borderRadius: 8,
-      borderColor: '#e3e3e3',
-      flexDirection: 'column',
-      alignItems: 'center',
-   },
-   itemRow: {
-      width: width,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      paddingHorizontal: 3,
-   },
-   itemWeekday: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: '#737373',
-      marginBottom: 4,
-   },
-   itemDate: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: '#111',
-   },
-   /** Placeholder */
-   placeholder: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: 0,
-      height: 400,
-      marginTop: 0,
-      padding: 0,
-      backgroundColor: 'transparent',
-   },
-   placeholderInset: {
-      borderWidth: 4,
-      borderColor: '#e5e7eb',
-      borderStyle: 'dashed',
-      borderRadius: 9,
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: 0,
-   },
-   /** Button */
-   btn: {
-      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
-      paddingVertical: 10,
-      paddingHorizontal: 20,
-      borderWidth: 1,
-      backgroundColor: '#007aff',
-      borderColor: '#007aff',
    },
-   btnText: {
-      fontSize: 18,
-      lineHeight: 26,
+   trophyIcon: {
+      position: 'absolute',
+      top: -2,
+      alignSelf: 'center',
+      zIndex: 10,
+      elevation: 5,
+   },
+   todayIndicator: {
+      position: 'absolute',
+      bottom: 2,
+      alignSelf: 'center',
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#ff4444',
+   },
+   dayNumber: {
+      fontSize: 16,
       fontWeight: '600',
-      color: '#fff',
+      color: colors.text.title,
    },
-});
-
-/* ===================================
-   ESTILOS DA PÁGINA
-=================================== */
-const pageStyles = StyleSheet.create({
-   page: {
+   dayNumberOtherMonth: {
+      color: colors.gray[300],
+   },
+   dayNumberComplete: {
+      color: 'white',
+   },
+   metricsContainer: {
+      marginTop: 8,
+   },
+   metricsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: 12,
+   },
+   metricCard: {
       flex: 1,
-      paddingHorizontal: 9,
-      paddingVertical: 18,
+      backgroundColor: colors.gray[100],
+      borderRadius: 12,
+      padding: 16,
+      alignItems: 'center',
    },
-});
-
-const stylesFilter = StyleSheet.create({
-   tag: {
-      backgroundColor: 'rgba(0,0,0,0.06)',
+   metricCardFull: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 16,
+   },
+   dailyAverageSection: {
+      flex: 1,
+      alignItems: 'center',
+   },
+   circularProgressContainer: {
+      marginBottom: 8,
+   },
+   metricIcon: {
+      marginBottom: 8,
+   },
+   metricValue: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 4,
+   },
+   metricLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.text.body,
+      textTransform: 'uppercase',
+   },
+   habitsCard: {
+      backgroundColor: colors.gray[100],
+      borderRadius: 12,
+      padding: 16,
+   },
+   habitsSectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text.title,
+      marginBottom: 16,
+   },
+   habitsList: {
+      gap: 12,
+   },
+   habitItem: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'flex-start',
+   },
+   habitColorIndicator: {
+      width: 4,
+      borderRadius: 2,
+      marginRight: 12,
+      alignSelf: 'stretch',
+   },
+   habitInfo: {
+      flex: 1,
+   },
+   habitHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+   },
+   habitTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text.title,
+      flex: 1,
+   },
+   habitAmount: {
+      fontSize: 14,
+      color: colors.text.body,
+      marginTop: 4,
+   },
+   habitNotesContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginTop: 8,
+      padding: 8,
+      backgroundColor: colors.gray[100],
+      borderRadius: 6,
+      gap: 6,
+   },
+   habitNotes: {
+      fontSize: 12,
+      color: colors.text.body,
+      flex: 1,
+      lineHeight: 16,
+   },
+   emptyHabitsContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 32,
+   },
+   emptyHabitsText: {
+      fontSize: 14,
+      color: colors.text.body,
+      marginTop: 12,
+   },
+   statusTagDone: {
+      backgroundColor: '#4CAF50',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+   },
+   statusTagTextDone: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: 'white',
+      textTransform: 'uppercase',
+   },
+   statusTagSkipped: {
+      backgroundColor: '#FFC107',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+   },
+   statusTagTextSkipped: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#333',
+      textTransform: 'uppercase',
+   },
+   statusTagMissed: {
+      backgroundColor: '#F44336',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+   },
+   statusTagTextMissed: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: 'white',
+      textTransform: 'uppercase',
+   },
+   totalsContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+   },
+   totalItem: {
+      alignItems: 'center',
+      gap: 6,
+   },
+   totalBadgeDone: {
+      backgroundColor: '#4CAF50',
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 8,
-      alignSelf: 'center',
+      borderRadius: 16,
+      minWidth: 40,
+      alignItems: 'center',
    },
-
-   tagActive: {
-      backgroundColor: '#59008c',
+   totalBadgeMissed: {
+      backgroundColor: '#F44336',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      minWidth: 40,
+      alignItems: 'center',
    },
-   tagText: {
-      fontSize: 10,
-      color: '#333',
-      fontWeight: '500',
+   totalBadgeSkipped: {
+      backgroundColor: '#FFC107',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      minWidth: 40,
+      alignItems: 'center',
    },
-
-   tagTextActive: {
+   totalBadgeText: {
+      fontSize: 16,
+      fontWeight: '700',
       color: 'white',
-      fontWeight: '600',
+   },
+   totalBadgeTextDark: {
+      color: '#333',
+   },
+   totalLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.text.body,
+      textTransform: 'uppercase',
    },
 });

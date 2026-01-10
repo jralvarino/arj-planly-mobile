@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useLocalSearchParams } from 'expo-router';
+import { router, Tabs, useLocalSearchParams } from 'expo-router';
 import moment from 'moment';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { styles } from '@/styles/tabs.styles';
 
@@ -49,6 +49,29 @@ export default function TabsLayout() {
          }}
       >
          <Tabs.Screen
+            name="add"
+            options={{
+               // Esconde a tab bar na tela de cadastro
+               tabBarStyle: { display: 'none' },
+               headerTitle: 'Novo hábito',
+               headerLeft: () => (
+                  <Pressable
+                     onPress={() => router.replace('/(tabs)')}
+                     hitSlop={12}
+                     style={{ marginLeft: 12 }}
+                  >
+                     <Ionicons name="chevron-back" size={24} color="#111" />
+                  </Pressable>
+               ),
+               tabBarIcon: ({ focused, color }) => (
+                  <View >
+                     <Ionicons name={'add'} size={24} color={focused ? '#59008c' : 'gray'} />
+                  </View>
+               ),
+            }}
+         />
+
+         <Tabs.Screen
             name="index"
             options={{
                headerTitle: () => <HeaderTitleComponent />,
@@ -86,26 +109,41 @@ export default function TabsLayout() {
             }}
          />
 
+
+
          <Tabs.Screen
-            name="add"
+            name="rating"
             options={{
-               headerTitle: '',
-               tabBarIcon: () => (
-                  <View style={styles.addButton}>
-                     <Ionicons name={'add'} size={24} color="white" />
+               headerTitle: 'Resumo',
+               tabBarIcon: ({ focused, color }) => (
+                  <View>
+                     <Ionicons
+                        name={focused ? 'calendar' : 'calendar-outline'}
+                        size={24}
+                        color={focused ? '#59008c' : 'gray'}
+                     />
                   </View>
                ),
             }}
          />
 
          <Tabs.Screen
-            name="rating"
+            name="categories"
             options={{
-               headerTitle: '',
+               headerTitle: 'Categorias',
+               headerRight: () => (
+                  <Pressable
+                     onPress={() => router.push('/categories/new')}
+                     hitSlop={12}
+                     style={{ marginRight: 12 }}
+                  >
+                     <Ionicons name="add" size={24} color="#59008c" />
+                  </Pressable>
+               ),
                tabBarIcon: ({ focused, color }) => (
                   <View>
                      <Ionicons
-                        name={focused ? 'calendar' : 'calendar-outline'}
+                        name={focused ? 'folder' : 'folder-outline'}
                         size={24}
                         color={focused ? '#59008c' : 'gray'}
                      />

@@ -1,87 +1,20 @@
+import moment from 'moment';
 import { getDatabase } from '../database/database';
 import { Habit } from '../models/Habit';
+import { scheduleHabitNotification } from './notificationService';
+
+// Importar expo-notifications de forma segura
+let Notifications: typeof import('expo-notifications') | null = null;
+try {
+   Notifications = require('expo-notifications');
+} catch (error) {
+   console.warn(
+      'expo-notifications module not available. Please rebuild the app.'
+   );
+}
 
 // Dados iniciais para popular o banco na primeira vez
-const initialHabits: Omit<Habit, 'id'>[] = [
-   {
-      title: 'Anki',
-      amount: '0/50',
-      streakCount: 1,
-      frequency: 'English',
-      completed: true,
-      color: '#f3eafe',
-      description: 'asdfg',
-      streak_count: '1',
-      emoji: 'book',
-      time: '22:00',
-      date: '2025-12-01',
-   },
-   {
-      title: 'Serie com legendas em Inglês',
-      amount: '0/1',
-      streakCount: 3,
-      frequency: 'English',
-      completed: true,
-      color: '#D8FFFB',
-      description: 'arrewerwef',
-      streak_count: '5',
-      emoji: 'camera',
-      time: 'night',
-      date: '2025-12-02',
-   },
-   {
-      title: 'Academia',
-      amount: '0/1',
-      streakCount: 3,
-      frequency: 'Healthy',
-      completed: false,
-      color: '#d6fce9',
-      description: 'arrewerwef',
-      streak_count: '30',
-      emoji: 'airplane',
-      time: 'anytime',
-      date: '2025-12-02',
-   },
-   {
-      title: 'Kindle',
-      amount: '0/3 pg',
-      streakCount: 3,
-      frequency: 'English',
-      completed: true,
-      color: '#ffe4e6',
-      description: 'arrewerwef',
-      streak_count: '100',
-      emoji: 'tv',
-      time: 'anytime',
-      date: '2025-11-25',
-   },
-   {
-      title: 'asdf',
-      amount: '0/3 pg',
-      streakCount: 3,
-      frequency: 'Home',
-      completed: false,
-      color: '#ffe4e6',
-      description: 'arrewerwef',
-      streak_count: '100',
-      emoji: 'tv',
-      time: 'anytime',
-      date: '2025-11-30',
-   },
-   {
-      title: 'asdf 1',
-      amount: '0/3 pg',
-      streakCount: 3,
-      frequency: 'Home',
-      completed: true,
-      color: '#ffe4e6',
-      description: 'arrewerwef',
-      streak_count: '100',
-      emoji: 'tv',
-      time: 'anytime',
-      date: '2025-11-30',
-   },
-];
+const initialHabits: Omit<Habit, 'id'>[] = [];
 
 // Converter resultado do banco para Habit
 const rowToHabit = (row: any): Habit => ({
@@ -91,12 +24,20 @@ const rowToHabit = (row: any): Habit => ({
    streakCount: row.streakCount,
    frequency: row.frequency,
    completed: Boolean(row.completed),
+   skipped: Boolean(row.skipped),
+   skip_reason: row.skip_reason || '',
+   skipped_at: row.skipped_at || '',
    color: row.color,
    description: row.description || '',
    streak_count: row.streak_count || '',
    emoji: row.emoji,
    time: row.time,
    date: row.date,
+   period_type: row.period_type || undefined,
+   period_config: row.period_config || undefined,
+   notes: row.notes || undefined,
+   end_date: row.end_date || undefined,
+   notification_time: row.notification_time || undefined,
 });
 
 // Inicializar banco com dados padrão
@@ -115,8 +56,9 @@ const initializeDatabase = async (): Promise<void> => {
          await db.runAsync(
             `INSERT INTO habits (
                id, title, amount, streakCount, frequency, completed, 
-               color, description, streak_count, emoji, time, date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               color, description, streak_count, emoji, time, date,
+               period_type, period_config
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                id,
                habit.title,
@@ -130,10 +72,126 @@ const initializeDatabase = async (): Promise<void> => {
                habit.emoji,
                habit.time,
                habit.date,
+               habit.period_type || null,
+               habit.period_config || null,
             ]
          );
       }
    }
+};
+
+// Função para gerar datas baseado no período
+const generateHabitDates = (
+   startDate: string,
+   periodType: string | undefined,
+   periodConfig: string | undefined,
+   endDate: string | undefined
+): string[] => {
+   const start = moment(startDate);
+   const end = endDate ? moment(endDate) : moment(startDate).add(3, 'months');
+   const dates: string[] = [];
+
+   if (!periodType || periodType === 'every_day') {
+      // Every day: todos os dias até a data final
+      let current = start.clone();
+      while (current.isSameOrBefore(end, 'day')) {
+         dates.push(current.format('YYYY-MM-DD'));
+         current.add(1, 'day');
+      }
+   } else if (periodType === 'specific_days_week') {
+      // Specific days of week: apenas nos dias da semana selecionados
+      if (!periodConfig) return [startDate];
+      const config = JSON.parse(periodConfig);
+      const selectedDays = config.days || [];
+      let current = start.clone();
+      while (current.isSameOrBefore(end, 'day')) {
+         const dayOfWeek = current.day();
+         if (selectedDays.includes(dayOfWeek)) {
+            dates.push(current.format('YYYY-MM-DD'));
+         }
+         current.add(1, 'day');
+      }
+   } else if (periodType === 'number_days_week') {
+      // Number of days per week: X dias por semana
+      if (!periodConfig) return [startDate];
+      const config = JSON.parse(periodConfig);
+      const numberDays = config.number || 3;
+      let current = start.clone();
+
+      while (current.isSameOrBefore(end, 'day')) {
+         const weekStart = current.clone().startOf('week');
+         const weekEnd = weekStart.clone().endOf('week');
+         let daysThisWeek = 0;
+         let temp = weekStart.clone();
+
+         // Pegar os primeiros X dias da semana que estão no intervalo
+         while (
+            temp.isSameOrBefore(weekEnd, 'day') &&
+            daysThisWeek < numberDays
+         ) {
+            if (
+               temp.isSameOrAfter(start, 'day') &&
+               temp.isSameOrBefore(end, 'day')
+            ) {
+               dates.push(temp.format('YYYY-MM-DD'));
+               daysThisWeek++;
+            }
+            temp.add(1, 'day');
+         }
+
+         // Avançar para a próxima semana
+         current = weekEnd.clone().add(1, 'day');
+      }
+   } else if (periodType === 'specific_days_month') {
+      // Specific days of month: apenas nos dias do mês selecionados
+      if (!periodConfig) return [startDate];
+      const config = JSON.parse(periodConfig);
+      const selectedDays = config.days || [];
+      let current = start.clone();
+      while (current.isSameOrBefore(end, 'day')) {
+         const dayOfMonth = current.date();
+         if (selectedDays.includes(dayOfMonth)) {
+            dates.push(current.format('YYYY-MM-DD'));
+         }
+         current.add(1, 'day');
+      }
+   } else if (periodType === 'number_days_month') {
+      // Number of days per month: X dias por mês
+      if (!periodConfig) return [startDate];
+      const config = JSON.parse(periodConfig);
+      const numberDays = config.number || 10;
+      let current = start.clone();
+
+      while (current.isSameOrBefore(end, 'day')) {
+         const monthStart = current.clone().startOf('month');
+         const monthEnd = monthStart.clone().endOf('month');
+         let daysThisMonth = 0;
+         let temp = monthStart.clone();
+
+         // Pegar os primeiros X dias do mês que estão no intervalo
+         while (
+            temp.isSameOrBefore(monthEnd, 'day') &&
+            daysThisMonth < numberDays
+         ) {
+            if (
+               temp.isSameOrAfter(start, 'day') &&
+               temp.isSameOrBefore(end, 'day')
+            ) {
+               dates.push(temp.format('YYYY-MM-DD'));
+               daysThisMonth++;
+            }
+            temp.add(1, 'day');
+         }
+
+         // Avançar para o próximo mês
+         current = monthEnd.clone().add(1, 'day');
+      }
+   } else {
+      // Fallback: apenas a data inicial
+      return [startDate];
+   }
+
+   return dates;
 };
 
 // Garantir que o banco está inicializado
@@ -172,34 +230,67 @@ export const createTask = async (habit: Omit<Habit, 'id'>): Promise<Habit> => {
    await ensureInitialized();
    const db = await getDatabase();
 
-   const id = `h${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-   await db.runAsync(
-      `INSERT INTO habits (
-         id, title, amount, streakCount, frequency, completed, 
-         color, description, streak_count, emoji, time, date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-         id,
-         habit.title,
-         habit.amount,
-         habit.streakCount,
-         habit.frequency,
-         habit.completed ? 1 : 0,
-         habit.color,
-         habit.description,
-         habit.streak_count,
-         habit.emoji,
-         habit.time,
-         habit.date,
-      ]
+   // Gerar datas baseado no período
+   const dates = generateHabitDates(
+      habit.date,
+      habit.period_type,
+      habit.period_config,
+      habit.end_date
    );
 
-   const created = await getTaskById(id);
-   if (!created) {
+   // Criar um hábito para cada data
+   const createdHabits: Habit[] = [];
+   for (const date of dates) {
+      const id = `h${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      await db.runAsync(
+         `INSERT INTO habits (
+            id, title, amount, streakCount, frequency, completed, 
+            color, description, streak_count, emoji, time, date,
+            period_type, period_config, notes, end_date, notification_time
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         [
+            id,
+            habit.title,
+            habit.amount,
+            habit.streakCount,
+            habit.frequency,
+            habit.completed ? 1 : 0,
+            habit.color,
+            habit.description,
+            habit.streak_count,
+            habit.emoji,
+            habit.time,
+            date,
+            habit.period_type || null,
+            habit.period_config || null,
+            habit.notes || null,
+            habit.end_date || null,
+            habit.notification_time || null,
+         ]
+      );
+
+      const created = await getTaskById(id);
+      if (created) {
+         createdHabits.push(created);
+
+         // Agendar notificação se houver horário configurado
+         if (habit.notification_time && habit.notification_time.trim()) {
+            await scheduleHabitNotification(
+               created.id,
+               created.title,
+               date,
+               habit.notification_time
+            );
+         }
+      }
+   }
+
+   // Retornar o primeiro hábito criado (ou o único se não houver período)
+   if (createdHabits.length === 0) {
       throw new Error('Failed to create task');
    }
-   return created;
+   return createdHabits[0];
 };
 
 export const updateTask = async (
@@ -232,6 +323,18 @@ export const updateTask = async (
       fields.push('completed = ?');
       values.push(updates.completed ? 1 : 0);
    }
+   if (updates.skipped !== undefined) {
+      fields.push('skipped = ?');
+      values.push(updates.skipped ? 1 : 0);
+   }
+   if (updates.skip_reason !== undefined) {
+      fields.push('skip_reason = ?');
+      values.push(updates.skip_reason);
+   }
+   if (updates.skipped_at !== undefined) {
+      fields.push('skipped_at = ?');
+      values.push(updates.skipped_at);
+   }
    if (updates.color !== undefined) {
       fields.push('color = ?');
       values.push(updates.color);
@@ -256,6 +359,26 @@ export const updateTask = async (
       fields.push('date = ?');
       values.push(updates.date);
    }
+   if (updates.period_type !== undefined) {
+      fields.push('period_type = ?');
+      values.push(updates.period_type);
+   }
+   if (updates.period_config !== undefined) {
+      fields.push('period_config = ?');
+      values.push(updates.period_config);
+   }
+   if (updates.notes !== undefined) {
+      fields.push('notes = ?');
+      values.push(updates.notes);
+   }
+   if (updates.end_date !== undefined) {
+      fields.push('end_date = ?');
+      values.push(updates.end_date);
+   }
+   if (updates.notification_time !== undefined) {
+      fields.push('notification_time = ?');
+      values.push(updates.notification_time);
+   }
 
    fields.push("updated_at = datetime('now')");
    values.push(id);
@@ -269,6 +392,41 @@ export const updateTask = async (
    if (!updated) {
       throw new Error('Failed to update task');
    }
+
+   // Se o horário de notificação foi alterado, reagendar notificações
+   if (updates.notification_time !== undefined || updates.date !== undefined) {
+      if (!Notifications) {
+         console.warn('Notifications module not available');
+      } else {
+         try {
+            // Cancelar notificações antigas para este hábito
+            const scheduledNotifications =
+               await Notifications.getAllScheduledNotificationsAsync();
+            for (const notification of scheduledNotifications) {
+               if (notification.content.data?.habitId === id) {
+                  await Notifications.cancelScheduledNotificationAsync(
+                     notification.identifier
+                  );
+               }
+            }
+
+            // Agendar nova notificação se houver horário configurado
+            const notificationTime = updated.notification_time;
+            if (notificationTime && notificationTime.trim()) {
+               await scheduleHabitNotification(
+                  updated.id,
+                  updated.title,
+                  updated.date,
+                  notificationTime
+               );
+            }
+         } catch (error) {
+            console.error('Error rescheduling notification:', error);
+            // Não falhar a atualização se houver erro ao reagendar notificação
+         }
+      }
+   }
+
    return updated;
 };
 

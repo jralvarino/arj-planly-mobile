@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import moment from 'moment';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
    Alert,
    KeyboardAvoidingView,
@@ -14,11 +14,12 @@ import {
 } from 'react-native';
 import Emoji from 'react-native-emoji';
 import { Text } from 'react-native-paper';
+import { Habit } from '../../models/Habit';
 import DatePicker from '../../components/DatePicker';
 import MonthCalendarPicker from '../../components/MonthCalendarPicker';
 import TimePicker from '../../components/TimePicker';
 import { getAllCategories } from '../../service/categoryService';
-import { createTask } from '../../service/taskService';
+import { getTaskById, updateTask } from '../../service/taskService';
 import { colors } from '../../theme/colors';
 
 const EMOJIS = [
@@ -95,8 +96,17 @@ const WEEK_DAYS = [
    { value: 6, label: 'Sáb' },
 ];
 
-export default function AddScreen() {
+export default function HabitEditScreen() {
    const router = useRouter();
+   const { id } = useLocalSearchParams<{ id: string }>();
+
+   const [habit, setHabit] = useState<Habit | null>(null);
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+
+   const habitId = useMemo(() => (id ? String(id) : ''), [id]);
+
+   // Form state
    const [title, setTitle] = useState('');
    const [description, setDescription] = useState('');
    const [amount, setAmount] = useState('0/1');
@@ -105,16 +115,13 @@ export default function AddScreen() {
    const [categories, setCategories] = useState<string[]>([]);
    const [selectedCategory, setSelectedCategory] = useState<string>('');
    const [selectedTime, setSelectedTime] = useState(TIMES[0]);
-   const [selectedDate, setSelectedDate] = useState(
-      moment().format('YYYY-MM-DD')
-   );
-   const [periodType, setPeriodType] = useState<string>('every_day');
-   const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]);
-   const [selectedMonthDays, setSelectedMonthDays] = useState<number[]>([]);
+   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
    const [notes, setNotes] = useState('');
    const [endDate, setEndDate] = useState('');
    const [notificationTime, setNotificationTime] = useState('');
-   const [loading, setLoading] = useState(false);
+   const [periodType, setPeriodType] = useState<'every_day' | 'specific_days_week' | 'specific_days_month'>('every_day');
+   const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]);
+   const [selectedMonthDays, setSelectedMonthDays] = useState<number[]>([]);
 
    // Carregar categorias do banco de dados
    useFocusEffect(
@@ -124,83 +131,119 @@ export default function AddScreen() {
                const cats = await getAllCategories();
                const categoryNames = cats.map((c) => c.name);
                setCategories(categoryNames);
-               if (categoryNames.length > 0 && !selectedCategory) {
-                  setSelectedCategory(categoryNames[0]);
-               }
             } catch (error) {
                console.error('Error loading categories:', error);
             }
          };
          loadCategories();
-      }, [selectedCategory])
+      }, [])
    );
 
-   const handleSave = async () => {
-      if (!title.trim()) {
-         Alert.alert('Erro', 'Por favor, preencha o título do hábito');
-         return;
-      }
-
-      // Validações específicas por tipo de período
-      if (
-         periodType === 'specific_days_week' &&
-         selectedWeekDays.length === 0
-      ) {
-         Alert.alert('Erro', 'Selecione pelo menos um dia da semana');
-         return;
-      }
-
-      if (
-         periodType === 'specific_days_month' &&
-         selectedMonthDays.length === 0
-      ) {
-         Alert.alert('Erro', 'Selecione pelo menos um dia do mês');
-         return;
-      }
-
-      setLoading(true);
-      try {
-         // Preparar period_config baseado no tipo
-         let periodConfig: string | undefined;
-         if (periodType === 'specific_days_week') {
-            periodConfig = JSON.stringify({ days: selectedWeekDays });
-         } else if (periodType === 'specific_days_month') {
-            periodConfig = JSON.stringify({ days: selectedMonthDays });
+   useEffect(() => {
+      const load = async () => {
+         if (!habitId) return;
+         setLoading(true);
+         try {
+            const h = await getTaskById(habitId);
+            if (!h) {
+               Alert.alert('Erro', 'Hábito não encontrado.');
+               router.back();
+               return;
+            }
+            setHabit(h);
+            setTitle(h.title);
+            setDescription(h.description || '');
+            setAmount(h.amount || '0/1');
+            setSelectedEmoji(h.emoji || 'book');
+            setSelectedColor(h.color || COLORS[0]);
+            setSelectedCategory(h.frequency || (categories.length > 0 ? categories[0] : ''));
+            setSelectedTime(h.time || TIMES[0]);
+            setSelectedDate(h.date || moment().format('YYYY-MM-DD'));
+            setNotes(h.notes || '');
+            setEndDate(h.end_date || '');
+            setNotificationTime(h.notification_time || '');
+            
+            // Carregar período
+            if (h.period_type) {
+               setPeriodType(h.period_type);
+               if (h.period_config) {
+                  try {
+                     const config = JSON.parse(h.period_config);
+                     if (h.period_type === 'specific_days_week') {
+                        setSelectedWeekDays(config.days || []);
+                     } else if (h.period_type === 'specific_days_month') {
+                        setSelectedMonthDays(config.days || []);
+                     }
+                  } catch (e) {
+                     console.error('Error parsing period_config:', e);
+                  }
+               }
+            }
+         } catch (e) {
+            console.error(e);
+            Alert.alert('Erro', 'Falha ao carregar hábito.');
+         } finally {
+            setLoading(false);
          }
+      };
+      load();
+   }, [habitId, router, categories]);
 
-         await createTask({
+   const computeCompletedFromAmount = (nextAmount: string) => {
+      const m = nextAmount.match(/^(\d+)\s*\/\s*(\d+)/);
+      if (!m) return null;
+      const cur = Number(m[1]);
+      const tot = Number(m[2]);
+      if (!Number.isFinite(cur) || !Number.isFinite(tot) || tot <= 0) return null;
+      return cur >= tot;
+   };
+
+   const getPeriodConfig = () => {
+      if (periodType === 'specific_days_week') {
+         return JSON.stringify({ days: selectedWeekDays });
+      } else if (periodType === 'specific_days_month') {
+         return JSON.stringify({ days: selectedMonthDays });
+      }
+      return undefined;
+   };
+
+   const handleSave = async () => {
+      if (!habit) return;
+      if (!title.trim()) {
+         Alert.alert('Erro', 'Título é obrigatório.');
+         return;
+      }
+
+      setSaving(true);
+      try {
+         const completed = computeCompletedFromAmount(amount);
+         const periodConfig = getPeriodConfig();
+         
+         const updated = await updateTask(habit.id, {
             title: title.trim(),
-            amount,
-            streakCount: 0,
-            frequency: selectedCategory,
-            completed: false,
-            color: selectedColor,
             description: description.trim(),
-            streak_count: '0',
+            amount,
             emoji: selectedEmoji,
+            color: selectedColor,
+            frequency: selectedCategory,
             time: selectedTime,
             date: selectedDate,
-            period_type: periodType as any,
-            period_config: periodConfig,
             notes: notes.trim() || undefined,
             end_date: endDate.trim() || undefined,
             notification_time: notificationTime.trim() || undefined,
+            period_type: periodType,
+            period_config: periodConfig,
+            ...(completed === null ? {} : { completed }),
          });
-
-         Alert.alert('Sucesso', 'Hábito criado com sucesso!', [
-            {
-               text: 'OK',
-               onPress: () => router.back(),
-            },
+         setHabit(updated);
+         Alert.alert('Sucesso', 'Hábito atualizado.', [
+            { text: 'OK', onPress: () => router.back() },
          ]);
-      } catch (error) {
-         console.error('Error creating habit:', error);
-         Alert.alert(
-            'Erro',
-            'Não foi possível criar o hábito. Tente novamente.'
-         );
+      } catch (e) {
+         console.error(e);
+         Alert.alert('Erro', 'Não foi possível salvar.');
       } finally {
-         setLoading(false);
+         setSaving(false);
       }
    };
 
@@ -211,6 +254,22 @@ export default function AddScreen() {
          setSelectedWeekDays([...selectedWeekDays, day].sort((a, b) => a - b));
       }
    };
+
+   if (loading) {
+      return (
+         <View style={[styles.container, styles.center]}>
+            <Text>Carregando...</Text>
+         </View>
+      );
+   }
+
+   if (!habit) {
+      return (
+         <View style={[styles.container, styles.center]}>
+            <Text>Hábito não encontrado.</Text>
+         </View>
+      );
+   }
 
    return (
       <KeyboardAvoidingView
@@ -470,6 +529,7 @@ export default function AddScreen() {
                         />
                      </View>
                   )}
+
                </View>
 
                {/* Date Input */}
@@ -542,12 +602,12 @@ export default function AddScreen() {
 
             {/* Save Button */}
             <TouchableOpacity
-               style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+               style={[styles.saveButton, saving && styles.saveButtonDisabled]}
                onPress={handleSave}
-               disabled={loading}
+               disabled={saving}
             >
                <Text style={styles.saveButtonText}>
-                  {loading ? 'Salvando...' : 'Salvar Hábito'}
+                  {saving ? 'Salvando...' : 'Salvar Hábito'}
                </Text>
             </TouchableOpacity>
          </ScrollView>
@@ -559,6 +619,10 @@ const styles = StyleSheet.create({
    container: {
       flex: 1,
       backgroundColor: '#FAFAFA',
+   },
+   center: {
+      justifyContent: 'center',
+      alignItems: 'center',
    },
    scrollView: {
       flex: 1,
