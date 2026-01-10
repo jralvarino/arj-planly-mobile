@@ -15,14 +15,14 @@ export function useLoginViewModel() {
     const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
 
     const handleLogin = useCallback(async () => {
-        // Validação
+        // Validation
         if (!username.trim()) {
-            Alert.alert("Erro", "Por favor, informe o login.");
+            Alert.alert("Validation Error", "Please enter your username.");
             return;
         }
 
         if (!password.trim()) {
-            Alert.alert("Erro", "Por favor, informe a senha.");
+            Alert.alert("Validation Error", "Please enter your password.");
             return;
         }
 
@@ -33,18 +33,18 @@ export function useLoginViewModel() {
                 password: password,
             };
 
-            const token = await login(loginData);
+            await login(loginData);
 
-            // Atualizar o store de autenticação
-            setAuthenticated(token);
+            // Update authentication store
+            setAuthenticated();
 
-            // Navegar para a tela principal após login bem-sucedido
+            // Navigate to main screen after successful login
             router.replace("/(tabs)");
         } catch (error: any) {
             console.log("Login error:", error);
 
-            // Pegar a mensagem de erro - pode vir do backend (error.response?.data?.message) ou ser uma mensagem genérica
-            let errorMessage = "Credenciais inválidas. Por favor, tente novamente.";
+            // Get error message - can come from backend (error.response?.data?.message) or be a generic message
+            let errorMessage = "Invalid credentials. Please try again.";
 
             if (error.response?.data?.message) {
                 errorMessage = error.response.data.message;
@@ -52,7 +52,7 @@ export function useLoginViewModel() {
                 errorMessage = error.message;
             }
 
-            Alert.alert("Erro ao fazer login", errorMessage);
+            Alert.alert("Login Error", errorMessage);
         } finally {
             setLoading(false);
         }

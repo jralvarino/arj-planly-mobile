@@ -15,14 +15,14 @@ export default function LoginScreen() {
                     {/* Logo/Title */}
                     <View style={styles.header}>
                         <Text style={styles.title}>Planly</Text>
-                        <Text style={styles.subtitle}>Faça login para continuar</Text>
+                        <Text style={styles.subtitle}>Sign in to continue</Text>
                     </View>
 
                     {/* Form */}
                     <View style={styles.form}>
                         {/* Username Input */}
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Login</Text>
+                            <Text style={styles.label}>Username</Text>
                             <View style={styles.inputWrapper}>
                                 <Ionicons
                                     name="person-outline"
@@ -32,7 +32,7 @@ export default function LoginScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Digite seu login"
+                                    placeholder="Enter your username"
                                     placeholderTextColor={colors.text.body}
                                     value={username}
                                     onChangeText={setUsername}
@@ -45,7 +45,7 @@ export default function LoginScreen() {
 
                         {/* Password Input */}
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Senha</Text>
+                            <Text style={styles.label}>Password</Text>
                             <View style={styles.inputWrapper}>
                                 <Ionicons
                                     name="lock-closed-outline"
@@ -55,7 +55,7 @@ export default function LoginScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Digite sua senha"
+                                    placeholder="Enter your password"
                                     placeholderTextColor={colors.text.body}
                                     value={password}
                                     onChangeText={setPassword}
@@ -80,7 +80,7 @@ export default function LoginScreen() {
                             onPress={handleLogin}
                             disabled={loading}
                         >
-                            <Text style={styles.loginButtonText}>{loading ? "Entrando..." : "Entrar"}</Text>
+                            <Text style={styles.loginButtonText}>{loading ? "Signing in..." : "Sign In"}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

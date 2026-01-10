@@ -4,36 +4,33 @@ import { isAuthenticated as checkAuth, logout as logoutService } from "../servic
 interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
-    token: string | null;
     hasChecked: boolean;
     checkAuthStatus: () => Promise<void>;
-    setAuthenticated: (token: string) => void;
-    setUnauthenticated: () => void;
+    setAuthenticated: () => void;
     logout: () => Promise<void>;
 }
 
-// Variável para controlar chamadas simultâneas
+// Variable to control concurrent calls
 let checkingPromise: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     isAuthenticated: false,
     isLoading: true,
-    token: null,
     hasChecked: false,
 
     checkAuthStatus: async () => {
         const currentState = get();
-        // Se já foi verificado, não verificar novamente
+        // If already checked, don't check again
         if (currentState.hasChecked) {
             return;
         }
 
-        // Se já está verificando, retornar a mesma promise
+        // If already checking, return the same promise
         if (checkingPromise) {
             return checkingPromise;
         }
 
-        // Criar uma nova promise para verificação
+        // Create a new promise for verification
         checkingPromise = (async () => {
             set({ isLoading: true });
 
@@ -59,19 +56,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return checkingPromise;
     },
 
-    setAuthenticated: (token: string) => {
+    setAuthenticated: () => {
         set({
             isAuthenticated: true,
-            token,
-            isLoading: false,
-            hasChecked: true,
-        });
-    },
-
-    setUnauthenticated: () => {
-        set({
-            isAuthenticated: false,
-            token: null,
             isLoading: false,
             hasChecked: true,
         });
@@ -82,16 +69,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await logoutService();
             set({
                 isAuthenticated: false,
-                token: null,
                 isLoading: false,
                 hasChecked: false,
             });
         } catch (error) {
             console.error("Error during logout:", error);
-            // Ainda assim, limpar o estado local
+            // Still clear local state
             set({
                 isAuthenticated: false,
-                token: null,
                 isLoading: false,
                 hasChecked: false,
             });

@@ -1,72 +1,38 @@
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import CalendarWeekView from '../../components/CalendarWeekView';
-import CategoryFilters from '../../components/CategoryFilters';
-import HabitsList from '../../components/HabitsList';
-import { useHomeViewModel } from '../../viewmodels/useHomeViewModel';
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useHomeViewModel } from "../../viewmodels/useHomeViewModel";
 
-export default function HomeScreen() {
-   const {
-      habits,
-      week,
-         value,
-      selectedFilter,
-      categories,
-      toggleHabit,
-      selectDate,
-      changeWeek,
-      changeDay,
-      changeWeekFromDays,
-      setFilter,
-      updateAmount,
-      skipHabit,
-      refreshHabits,
-   } = useHomeViewModel();
+export default function Home() {
+    const { handleLogout } = useHomeViewModel();
 
-   // Recarregar hábitos quando a tela receber foco (ex: após criar novo hábito)
-   useFocusEffect(
-      useCallback(() => {
-         refreshHabits();
-      }, [refreshHabits])
-   );
-
-   return (
-      <SafeAreaView style={{ flex: 1 }}>
-         <View style={styles.container}>
-            <CalendarWeekView
-               week={week}
-               value={value}
-               habits={habits}
-               onDateSelect={selectDate}
-               onWeekChange={changeWeek}
-            />
-
-            <CategoryFilters
-               categories={categories}
-               selectedFilter={selectedFilter}
-               onFilterChange={setFilter}
-            />
-
-            <HabitsList
-               value={value}
-               habits={habits}
-               selectedFilter={selectedFilter}
-               onToggle={toggleHabit}
-               onDayChange={changeDay}
-               onWeekChange={changeWeekFromDays}
-               onUpdateAmount={updateAmount}
-               onSkip={skipHabit}
-            />
-         </View>
-      </SafeAreaView>
-   );
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>Home Tab</Text>
+            <TouchableOpacity style={styles.button} onPress={handleLogout}>
+                <Text style={styles.buttonText}>Logout</Text>
+            </TouchableOpacity>
+        </View>
+    );
 }
+
 const styles = StyleSheet.create({
-   container: {
-      flex: 1,
-      paddingVertical: 1,
-      backgroundColor: 'white',
-   },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    title: {
+        fontSize: 22,
+        marginBottom: 20,
+    },
+    button: {
+        backgroundColor: "#4CAF50",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    buttonText: {
+        color: "white",
+        fontSize: 16,
+        fontWeight: "600",
+    },
 });
