@@ -17,16 +17,13 @@ export const login = async (userData: LoginHttpParams): Promise<void> => {
         throw new Error("Token not found in response");
     }
 
-    // Save the token
     await tokenStorage.saveToken(data.token);
 };
 
-// Logout
 export const logout = async (): Promise<void> => {
     await tokenStorage.removeToken();
 };
 
-// Check if authenticated
 export const isAuthenticated = async (): Promise<boolean> => {
     const token = await tokenStorage.getToken();
     return token !== null;

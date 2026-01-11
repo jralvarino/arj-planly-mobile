@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/colors";
-import { useLoginViewModel } from "../viewmodels/useLoginViewModel";
+import { useLoginViewModel } from "../viewmodels/login/useLoginViewModel";
 
 export default function LoginScreen() {
     const { username, password, loading, showPassword, setUsername, setPassword, handleLogin, toggleShowPassword } =

@@ -1,9 +1,9 @@
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert } from "react-native";
-import type { LoginHttpParams } from "../interfaces/http/LoginHttpParams";
-import { login } from "../service/auth.service";
-import { useAuthStore } from "../stores/authStore";
+import type { LoginHttpParams } from "../../interfaces/http/LoginHttpParams";
+import { login } from "../../service/auth.service";
+import { useAuthStore } from "../../stores/authStore";
 
 export function useLoginViewModel() {
     const router = useRouter();

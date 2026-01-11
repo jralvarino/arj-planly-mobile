@@ -1,25 +1,63 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { router, Tabs } from "expo-router";
+import { Pressable, StyleSheet, View } from "react-native";
+import { colors } from "../../theme/colors";
 
 export default function TabsLayout() {
-    // Route protection for this group is handled in root _layout.tsx using Stack.Protected
-    // So this component doesn't need to manually check authentication
-
     return (
         <Tabs
-            screenOptions={({ route }) => ({
-                tabBarIcon: ({ color, size }) => {
-                    let icon = "home";
-
-                    if (route.name === "index") icon = "home";
-                    if (route.name === "profile") icon = "person";
-
-                    return <Ionicons name={icon as any} size={size} color={color} />;
-                },
-                tabBarActiveTintColor: "#4CAF50",
-            })}
+            screenOptions={{
+                tabBarShowLabel: false,
+                tabBarStyle: styles.tabBar,
+            }}
         >
             <Tabs.Screen name="index" options={{ title: "Home" }} />
+            <Tabs.Screen
+                name="categories"
+                options={{
+                    headerTitle: "Category",
+                    headerRight: () => (
+                        <Pressable
+                            onPress={() => router.push("/categories/new")}
+                            hitSlop={12}
+                            style={{ marginRight: 12 }}
+                        >
+                            <Ionicons name="add" size={24} color={colors.primary} />
+                        </Pressable>
+                    ),
+                    tabBarIcon: ({ focused, color }) => (
+                        <View>
+                            <MaterialIcons name="category" size={24} color={focused ? colors.primary : "gray"} />
+                        </View>
+                    ),
+                }}
+            />
         </Tabs>
     );
 }
+
+const styles = StyleSheet.create({
+    tabBar: {
+        position: "absolute",
+        bottom: 0,
+        left: 16,
+        right: 16,
+        height: 72,
+        elevation: 0,
+        backgroundColor: "white",
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    addButton: {
+        height: 60,
+        width: 60,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 99999,
+        backgroundColor: "#59008c",
+        marginBottom: 30,
+    },
+});
