@@ -12,7 +12,58 @@ export default function TabsLayout() {
                 tabBarStyle: styles.tabBar,
             }}
         >
-            <Tabs.Screen name="index" options={{ title: "Home" }} />
+            <Tabs.Screen
+                name="index"
+                options={{
+                    tabBarIcon: ({ focused, color }) => (
+                        <View>
+                            <Ionicons
+                                name={focused ? "checkmark-done" : "checkmark-done-outline"}
+                                size={24}
+                                color={focused ? colors.primary : "gray"}
+                            />
+                        </View>
+                    ),
+                }}
+            />
+
+            <Tabs.Screen
+                name="habits"
+                options={{
+                    headerTitle: "Habits",
+                    headerRight: () => (
+                        <Pressable onPress={() => router.push("/habits/new")} hitSlop={12} style={{ marginRight: 12 }}>
+                            <Ionicons name="add" size={24} color={colors.primary} />
+                        </Pressable>
+                    ),
+                    tabBarIcon: ({ focused, color }) => (
+                        <View>
+                            <Ionicons
+                                name={focused ? "list" : "list-outline"}
+                                size={24}
+                                color={focused ? colors.primary : "gray"}
+                            />
+                        </View>
+                    ),
+                }}
+            />
+
+            <Tabs.Screen
+                name="statistics"
+                options={{
+                    headerTitle: "Statistics",
+                    tabBarIcon: ({ focused, color }) => (
+                        <View>
+                            <Ionicons
+                                name={focused ? "calendar" : "calendar-outline"}
+                                size={24}
+                                color={focused ? colors.primary : "gray"}
+                            />
+                        </View>
+                    ),
+                }}
+            />
+
             <Tabs.Screen
                 name="categories"
                 options={{

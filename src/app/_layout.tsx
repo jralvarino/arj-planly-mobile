@@ -27,6 +27,7 @@ export default function RootLayout() {
                 <Stack.Protected guard={isAuthenticated}>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="categories" options={{ headerShown: false }} />
+                    <Stack.Screen name="habits" options={{ headerShown: false }} />
                 </Stack.Protected>
             </Stack>
         </GestureHandlerRootView>
