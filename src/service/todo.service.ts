@@ -1,4 +1,4 @@
-import { Todo } from "@/models/Todo";
+import { Todo, TodoStatus } from "@/models/Todo";
 import { planlyApiClient } from "../api/planly-api";
 
 export const getTodosByDate = async (date: string): Promise<Todo[]> => {
@@ -6,7 +6,18 @@ export const getTodosByDate = async (date: string): Promise<Todo[]> => {
     return data || [];
 };
 
-export const updateTodoStatus = async (id: string, status: "done" | "pending" | "skipped"): Promise<Todo> => {
-    const { data } = await planlyApiClient.post<Todo>(`/todo`, { id, status });
+export const updateTodoStatus = async (
+    habitId: string,
+    date: string,
+    status: TodoStatus,
+    progressValue: string,
+    notes: string
+): Promise<Todo> => {
+    const { data } = await planlyApiClient.patch<Todo>(`/todo/${habitId}`, {
+        date,
+        status,
+        progressValue,
+        notes,
+    });
     return data;
 };

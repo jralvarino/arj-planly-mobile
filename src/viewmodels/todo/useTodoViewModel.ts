@@ -1,39 +1,77 @@
-import { useCallback, useEffect, useState } from "react";
+import { Audio } from "expo-av";
+import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
 import { Category } from "../../models/Category";
-import { Todo } from "../../models/Todo";
+import { TODO_STATUS, Todo, TodoStatus } from "../../models/Todo";
 import { getAllCategories } from "../../service/category.service";
 import { getTodosByDate, updateTodoStatus } from "../../service/todo.service";
-import { useAuthStore } from "../../stores/authStore";
 
 const getTodayDate = (): string => {
     return new Date().toISOString().split("T")[0];
 };
 
 export function useTodoViewModel() {
-    const logout = useAuthStore((state) => state.logout);
     const [todos, setTodos] = useState<Todo[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [updating, setUpdating] = useState(false);
+    const soundRef = useRef<Audio.Sound | null>(null);
 
-    const handleLogout = useCallback(() => {
-        logout();
-    }, [logout]);
+    // Carrega o som quando o componente é montado
+    useEffect(() => {
+        const loadSound = async () => {
+            try {
+                await Audio.setAudioModeAsync({
+                    playsInSilentModeIOS: true,
+                    allowsRecordingIOS: false,
+                    staysActiveInBackground: false,
+                });
+                const { sound } = await Audio.Sound.createAsync(require("../../../assets/sounds/todo-completed.mp3"));
+                soundRef.current = sound;
+            } catch (err) {
+                console.log("Could not load sound:", err);
+            }
+        };
+        loadSound();
 
-    const fetchTodos = useCallback(async (date: string) => {
-        try {
-            setLoading(true);
-            setError(null);
-            const data = await getTodosByDate(date);
-            setTodos(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch todos");
-            setTodos([]);
-        } finally {
-            setLoading(false);
-        }
+        return () => {
+            // Limpa o som quando o componente é desmontado
+            if (soundRef.current) {
+                soundRef.current.unloadAsync().catch(() => {});
+            }
+        };
     }, []);
+
+    const sortTodos = useCallback((todos: Todo[]): Todo[] => {
+        // Ordena: pending primeiro, depois done e skipped no final
+        return [...todos].sort((a, b) => {
+            if (a.status === TODO_STATUS.PENDING && b.status !== TODO_STATUS.PENDING) return -1;
+            if (a.status !== TODO_STATUS.PENDING && b.status === TODO_STATUS.PENDING) return 1;
+            // Se ambos são pending ou ambos são done/skipped, mantém a ordem original
+            return 0;
+        });
+    }, []);
+
+    const fetchTodos = useCallback(
+        async (date: string) => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await getTodosByDate(date);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to fetch todos");
+                setTodos([]);
+            } finally {
+                setLoading(false);
+            }
+        },
+        [sortTodos]
+    );
 
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -41,13 +79,14 @@ export function useTodoViewModel() {
         try {
             setError(null);
             const data = await getTodosByDate(today);
-            setTodos(data);
+            const sortedData = sortTodos(data);
+            setTodos(sortedData);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to fetch todos");
         } finally {
             setRefreshing(false);
         }
-    }, []);
+    }, [sortTodos]);
 
     const fetchCategories = useCallback(async () => {
         try {
@@ -65,18 +104,163 @@ export function useTodoViewModel() {
     }, [fetchTodos, fetchCategories]);
 
     const handleToggleTodo = useCallback(
-        async (todoId: string, currentStatus: "done" | "pending" | "skipped") => {
+        async (todoId: string, currentStatus: TodoStatus, progressValue: string, notes: string = "") => {
             try {
-                const newStatus = currentStatus === "done" ? "pending" : "done";
-                await updateTodoStatus(todoId, newStatus);
-                // Atualiza a lista após a mudança
+                setUpdating(true);
+                const newStatus = currentStatus === TODO_STATUS.DONE ? TODO_STATUS.PENDING : TODO_STATUS.DONE;
                 const today = getTodayDate();
-                await fetchTodos(today);
+                // O todoId é o habitId no endpoint
+                await updateTodoStatus(todoId, today, newStatus, progressValue, notes);
+
+                // Toca som/haptic quando o Todo é concluído
+                if (newStatus === TODO_STATUS.DONE) {
+                    try {
+                        // Feedback háptico
+                        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    } catch (hapticError) {
+                        // Se haptics falhar, ignora silenciosamente
+                        console.log("Haptic feedback not available");
+                    }
+
+                    // Toca som customizado
+                    if (soundRef.current) {
+                        try {
+                            await soundRef.current.replayAsync();
+                        } catch (soundError) {
+                            console.log("Could not play sound:", soundError);
+                        }
+                    }
+                }
+
+                // Atualiza a lista após a mudança com animação
+                const data = await getTodosByDate(today);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
             } catch (err) {
                 console.error("Error toggling todo:", err);
+                const errorMessage =
+                    err instanceof Error ? err.message : "Failed to update todo status. Please try again.";
+                Alert.alert("Error", errorMessage);
+            } finally {
+                setUpdating(false);
             }
         },
-        [fetchTodos]
+        [sortTodos]
+    );
+
+    const handleSkipTodo = useCallback(
+        async (todoId: string, progressValue: string, notes: string = "") => {
+            try {
+                setUpdating(true);
+                const today = getTodayDate();
+                // Define o status como skipped e reseta progressValue para 0
+                await updateTodoStatus(todoId, today, TODO_STATUS.SKIPPED, "0", notes);
+                // Atualiza a lista após a mudança com animação
+                const data = await getTodosByDate(today);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
+            } catch (err) {
+                console.error("Error skipping todo:", err);
+                const errorMessage = err instanceof Error ? err.message : "Failed to skip todo. Please try again.";
+                Alert.alert("Error", errorMessage);
+            } finally {
+                setUpdating(false);
+            }
+        },
+        [sortTodos]
+    );
+
+    const handleUndoSkip = useCallback(
+        async (todoId: string, notes: string = "") => {
+            try {
+                setUpdating(true);
+                const today = getTodayDate();
+                // Volta o status para pending e reseta progressValue para 0
+                await updateTodoStatus(todoId, today, TODO_STATUS.PENDING, "0", notes);
+                // Atualiza a lista após a mudança com animação
+                const data = await getTodosByDate(today);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
+            } catch (err) {
+                console.error("Error undoing skip:", err);
+                const errorMessage = err instanceof Error ? err.message : "Failed to undo skip. Please try again.";
+                Alert.alert("Error", errorMessage);
+            } finally {
+                setUpdating(false);
+            }
+        },
+        [sortTodos]
+    );
+
+    const handleSkipTodoWithConfirmation = useCallback(
+        (todoId: string, todoTitle: string, currentStatus: TodoStatus, progressValue: string, notes: string = "") => {
+            // Se o status for skipped, faz undo (volta para pending)
+            if (currentStatus === TODO_STATUS.SKIPPED) {
+                handleUndoSkip(todoId, notes);
+                return;
+            }
+
+            // Não permite skip se o status for done
+            if (currentStatus === TODO_STATUS.DONE) {
+                Alert.alert("Cannot Skip", "A completed todo cannot be skipped.");
+                return;
+            }
+
+            // Só permite skip se o status for pending
+            if (currentStatus !== TODO_STATUS.PENDING) {
+                return;
+            }
+
+            // Faz skip diretamente
+            handleSkipTodo(todoId, progressValue, notes);
+        },
+        [handleSkipTodo, handleUndoSkip]
+    );
+
+    const playCompletionSound = useCallback(async () => {
+        try {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (hapticError) {
+            console.log("Haptic feedback not available");
+        }
+
+        if (soundRef.current) {
+            try {
+                await soundRef.current.replayAsync();
+            } catch (soundError) {
+                console.log("Could not play sound:", soundError);
+            }
+        }
+    }, []);
+
+    const handleSaveTodo = useCallback(
+        async (todoId: string, status: TodoStatus, progressValue: string, notes: string = "") => {
+            try {
+                setUpdating(true);
+                const today = getTodayDate();
+                // Se o status for pending ou skipped, reseta progressValue para 0
+                const finalProgressValue =
+                    status === TODO_STATUS.PENDING || status === TODO_STATUS.SKIPPED ? "0" : progressValue;
+                await updateTodoStatus(todoId, today, status, finalProgressValue, notes);
+
+                // Toca som/haptic quando o Todo é concluído
+                if (status === TODO_STATUS.DONE) {
+                    await playCompletionSound();
+                }
+
+                // Atualiza a lista após a mudança com animação
+                const data = await getTodosByDate(today);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
+            } catch (err) {
+                console.error("Error saving todo:", err);
+                const errorMessage = err instanceof Error ? err.message : "Failed to save todo. Please try again.";
+                Alert.alert("Error", errorMessage);
+            } finally {
+                setUpdating(false);
+            }
+        },
+        [sortTodos, playCompletionSound]
     );
 
     useEffect(() => {
@@ -86,14 +270,17 @@ export function useTodoViewModel() {
     }, [fetchTodos, fetchCategories]);
 
     return {
-        handleLogout,
         todos,
         categories,
         loading,
         error,
         refreshing,
+        updating,
         handleRefresh,
         handleFocus,
         handleToggleTodo,
+        handleSkipTodoWithConfirmation,
+        handleSaveTodo,
+        playCompletionSound,
     };
 }
