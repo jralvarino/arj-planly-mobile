@@ -27,6 +27,7 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
         handleScroll,
         handleScrollEnd,
         isDayComplete,
+        getDayColor,
     } = useWeekCarouselViewModel({
         selectedDate,
         weekSummary,
@@ -38,6 +39,14 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
     const renderDayItem = useCallback(
         ({ item }: { item: (typeof daysList)[0] }) => {
             const isComplete = isDayComplete(item.dateString);
+            const dayColor = getDayColor(item.dateString);
+            const isSelected = selectedDate === item.dateString;
+            
+            // Determina se o texto deve ser branco ou escuro baseado na cor de fundo
+            // A cor de fundo sempre reflete o progresso, não muda quando selecionado
+            const isColoredBackground = dayColor !== colors.gray[100];
+            const textColor = isColoredBackground ? "#fff" : colors.text.body;
+            const numberColor = isColoredBackground ? "#fff" : colors.text.title;
 
             return (
                 <View style={{ alignItems: "center", width: dayItemWidth, marginRight: gapBetweenItems }}>
@@ -47,25 +56,31 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
                     <TouchableOpacity
                         style={[
                             styles.dayButton,
-                            { width: dayItemWidth },
-                            selectedDate === item.dateString && styles.dayButtonActive,
-                            item.isToday && styles.dayButtonToday,
+                            { 
+                                width: dayItemWidth,
+                                backgroundColor: dayColor, // Sempre usa a cor do progresso
+                            },
+                            item.isToday && !isSelected && styles.dayButtonToday,
+                            isSelected && styles.dayButtonSelected, // Borda destacada quando selecionado
                         ]}
                         onPress={() => onDateSelect(item.dateString)}
                     >
-                        <Text style={[styles.dayNameText, selectedDate === item.dateString && styles.dayNameTextActive]}>
+                        <Text style={[styles.dayNameText, { color: textColor }]}>
                             {item.dayName}
                         </Text>
                         <Text
-                            style={[styles.dayNumberText, selectedDate === item.dateString && styles.dayNumberTextActive]}
+                            style={[styles.dayNumberText, { color: numberColor }]}
                         >
                             {item.dayNumber}
                         </Text>
                     </TouchableOpacity>
+                    {item.isToday && (
+                        <View style={styles.todayIndicator} />
+                    )}
                 </View>
             );
         },
-        [selectedDate, isDayComplete, onDateSelect, dayItemWidth, gapBetweenItems]
+        [selectedDate, isDayComplete, getDayColor, onDateSelect, dayItemWidth, gapBetweenItems]
     );
 
     return (
@@ -141,8 +156,21 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     dayButtonToday: {
+        borderWidth: 0,
+        borderColor: colors.primary,
+    },
+    dayButtonSelected: {
         borderWidth: 2,
         borderColor: colors.primary,
+        // Adiciona uma sombra para destacar ainda mais quando selecionado
+        shadowColor: colors.primary,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
+        elevation: 5, // Para Android
     },
     dayNameText: {
         fontSize: 11,
@@ -160,5 +188,12 @@ const styles = StyleSheet.create({
     },
     dayNumberTextActive: {
         color: "#fff",
+    },
+    todayIndicator: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: colors.gray[300],
+        marginTop: 5,
     },
 });

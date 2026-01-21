@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList } from "react-native";
 import { WeekSummary } from "../../interfaces/todo/summary.interface";
+import { getCalendarColorByHabits } from "../../utils/colorUtils";
+import { colors } from "../../theme/colors";
 
 const INITIAL_DAYS_COUNT = 200; // 100 dias para trás e 100 para frente
 const CONTAINER_PADDING = 3 * 2; // paddingHorizontal de 3 em cada lado
@@ -258,6 +260,31 @@ export function useWeekCarouselViewModel({
         [weekSummary]
     );
 
+    // Calcula a cor do dia baseado na quantidade de todos completados
+    const getDayColor = useCallback(
+        (dateString: string): string => {
+            const daySummary = weekSummary.find((day) => day.date === dateString);
+            if (!daySummary) {
+                // Se não houver summary, retorna a cor padrão
+                return colors.gray[100];
+            }
+            
+            const completed = daySummary.total.done;
+            const total = daySummary.total.total;
+            
+            // Se nenhum todo foi completado, retorna a cor cinza padrão
+            if (completed === 0 || total === 0) {
+                return colors.gray[100];
+            }
+            
+            // Usa a cor primária como base e calcula a cor baseado no progresso
+            const calculatedColor = getCalendarColorByHabits(colors.primary, completed, total);
+            
+            return calculatedColor;
+        },
+        [weekSummary]
+    );
+
     // Inicializa o scroll quando a lista estiver pronta
     useEffect(() => {
         if (daysList.length > 0 && initialScrollIndex > 0) {
@@ -281,6 +308,7 @@ export function useWeekCarouselViewModel({
         handleScroll,
         handleScrollEnd,
         isDayComplete,
+        getDayColor,
         onDateSelect,
         selectedDate,
     };

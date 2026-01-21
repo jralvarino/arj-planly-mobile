@@ -52,12 +52,32 @@ export function useTodoViewModel() {
     }, []);
 
     const sortTodos = useCallback((todos: Todo[]): Todo[] => {
-        // Ordena: pending primeiro, depois done e skipped no final
+        // Ordena: 1) pending primeiro, done por último; 2) depois por period (Morning, Afternoon, Evening, Anytime)
+        const periodOrder: Record<string, number> = {
+            Morning: 1,
+            Afternoon: 2,
+            Evening: 3,
+            Anytime: 4,
+        };
+
         return [...todos].sort((a, b) => {
-            if (a.status === TODO_STATUS.PENDING && b.status !== TODO_STATUS.PENDING) return -1;
-            if (a.status !== TODO_STATUS.PENDING && b.status === TODO_STATUS.PENDING) return 1;
-            // Se ambos são pending ou ambos são done/skipped, mantém a ordem original
-            return 0;
+            // 1. Ordena por status: pending primeiro, depois skipped, done por último
+            const statusOrder: Record<TodoStatus, number> = {
+                [TODO_STATUS.PENDING]: 1,
+                [TODO_STATUS.SKIPPED]: 2,
+                [TODO_STATUS.DONE]: 3,
+            };
+
+            const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+            if (statusDiff !== 0) {
+                return statusDiff;
+            }
+
+            // 2. Se status igual, ordena por period
+            const aPeriodOrder = periodOrder[a.period] || 5; // Valores não conhecidos ficam no final
+            const bPeriodOrder = periodOrder[b.period] || 5;
+
+            return aPeriodOrder - bPeriodOrder;
         });
     }, []);
 

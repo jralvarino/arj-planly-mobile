@@ -1,28 +1,37 @@
-export function getCalendarColorByHabits(baseColor, completed, total) {
-   if (total === 0 || completed === 0) return 'white';
+export function getCalendarColorByHabits(baseColor: string, completed: number, total: number): string {
+   // Se não houver total, retorna branco (será substituído por cor padrão)
+   if (total === 0) return 'white';
 
-   if (total === completed) {
-      return '#59008c';
+   // Se todos estão completos, retorna a cor primária completa
+   if (completed === total && total > 0) {
+      return baseColor; // Usa a cor base diretamente quando completo
    }
 
-   const range = completed / total; // 0 → 1
+   // Calcula o progresso (0 a 1)
+   const range = completed / total;
 
    // Converte a cor base
    const { r, g, b } = hexToRgb(baseColor);
    let { h, s, l } = rgbToHsl(r, g, b);
 
-   // AUMENTO progressivo da saturação
-   s = Math.min(1, s + range * 0.6);
+   // AUMENTO progressivo da saturação conforme completa mais hábitos
+   // Começa com saturação bem baixa (cor bem clara) e aumenta até a saturação original
+   const minSaturation = 0.1;
+   s = minSaturation + (s - minSaturation) * range;
+   s = Math.min(1, s); // Garante que não ultrapasse 1
 
-   // DIMINUI levemente a luminosidade quanto mais completo
-   l = Math.max(0, l - range * 0.25);
+   // DIMINUI progressivamente a luminosidade quanto mais completo (cor mais escura/forte)
+   // Começa bem claro (luminosidade alta) e vai escurecendo até a luminosidade da cor base
+   const maxLightness = Math.min(0.9, 0.85 + (1 - l) * 0.2); // Luminosidade inicial bem alta
+   l = maxLightness - (maxLightness - l) * range;
+   l = Math.max(0, Math.min(1, l)); // Garante que esteja entre 0 e 1
 
    const { r: nr, g: ng, b: nb } = hslToRgb(h, s, l);
    return rgbToHex(nr, ng, nb);
 }
 
 // Função principal: deixar a cor mais forte
-export function makeColorStronger(hexColor) {
+export function makeColorStronger(hexColor: string): string {
    const { r, g, b } = hexToRgb(hexColor);
    let { h, s, l } = rgbToHsl(r, g, b);
 
@@ -37,12 +46,12 @@ export function makeColorStronger(hexColor) {
 }
 
 // Função auxiliar para converter HEX em RGB
-function hexToRgb(hex) {
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
    hex = hex.replace(/^#/, '');
    if (hex.length === 3) {
       hex = hex
          .split('')
-         .map((x) => x + x)
+         .map((x: string) => x + x)
          .join('');
    }
    const num = parseInt(hex, 16);
@@ -54,14 +63,14 @@ function hexToRgb(hex) {
 }
 
 // Converter RGB para HSL
-function rgbToHsl(r, g, b) {
+function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
    r /= 255;
    g /= 255;
    b /= 255;
    const max = Math.max(r, g, b),
       min = Math.min(r, g, b);
-   let h,
-      s,
+   let h: number,
+      s: number,
       l = (max + min) / 2;
 
    if (max === min) {
@@ -79,6 +88,8 @@ function rgbToHsl(r, g, b) {
          case b:
             h = (r - g) / d + 4;
             break;
+         default:
+            h = 0;
       }
       h /= 6;
    }
@@ -86,13 +97,13 @@ function rgbToHsl(r, g, b) {
 }
 
 // Converter HSL para RGB
-function hslToRgb(h, s, l) {
-   let r, g, b;
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+   let r: number, g: number, b: number;
 
    if (s === 0) {
       r = g = b = l; // cinza
    } else {
-      const hue2rgb = (p, q, t) => {
+      const hue2rgb = (p: number, q: number, t: number): number => {
          if (t < 0) t += 1;
          if (t > 1) t -= 1;
          if (t < 1 / 6) return p + (q - p) * 6 * t;
@@ -115,11 +126,11 @@ function hslToRgb(h, s, l) {
 }
 
 // Converter RGB para HEX
-function rgbToHex(r, g, b) {
+function rgbToHex(r: number, g: number, b: number): string {
    return (
       '#' +
       [r, g, b]
-         .map((x) => {
+         .map((x: number) => {
             const hex = x.toString(16);
             return hex.length === 1 ? '0' + hex : hex;
          })
