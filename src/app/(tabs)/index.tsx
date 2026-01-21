@@ -76,15 +76,25 @@ export default function HomeScreen() {
         return todos.filter((todo) => todo.categoryId === selectedCategoryId);
     }, [todos, selectedCategoryId]);
 
+    // Verifica se todos os TODOS estão done ou skipped
+    const allTodosDoneOrSkipped = useMemo(() => {
+        if (filteredTodos.length === 0) return false;
+        return filteredTodos.every(
+            (todo) => todo.status === TODO_STATUS.DONE || todo.status === TODO_STATUS.SKIPPED
+        );
+    }, [filteredTodos]);
+
     const renderItem = useCallback(
         ({ item, index }: { item: (typeof filteredTodos)[0]; index: number }) => {
             // Verifica se este é o primeiro Todo com status "done"
             const isFirstDone =
+                !allTodosDoneOrSkipped &&
                 item.status === TODO_STATUS.DONE &&
                 (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.DONE);
 
             // Verifica se este é o primeiro Todo com status "skipped"
             const isFirstSkipped =
+                !allTodosDoneOrSkipped &&
                 item.status === TODO_STATUS.SKIPPED &&
                 (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.SKIPPED);
 
@@ -136,6 +146,7 @@ export default function HomeScreen() {
             playCompletionSound,
             categories,
             filteredTodos,
+            allTodosDoneOrSkipped,
         ]
     );
 
