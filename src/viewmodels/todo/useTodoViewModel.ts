@@ -11,8 +11,8 @@ const getTodayDate = (): string => {
     // Usa o timezone local em vez de UTC para evitar problemas de timezone
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
 
@@ -113,16 +113,14 @@ export function useTodoViewModel() {
     const handleToggleTodo = useCallback(
         async (todoId: string, currentStatus: TodoStatus, progressValue: string, notes: string = "", date?: string) => {
             const newStatus = currentStatus === TODO_STATUS.DONE ? TODO_STATUS.PENDING : TODO_STATUS.DONE;
-            
+
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
-            
+
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId
-                        ? { ...todo, status: newStatus, progressValue, notes }
-                        : todo
+                    todo.id === todoId ? { ...todo, status: newStatus, progressValue, notes } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -168,9 +166,7 @@ export function useTodoViewModel() {
                     // Reverte a mudança otimista em caso de erro
                     setTodos((prevTodos) => {
                         const revertedTodos = prevTodos.map((todo) =>
-                            todo.id === todoId
-                                ? { ...todo, status: currentStatus, progressValue, notes }
-                                : todo
+                            todo.id === todoId ? { ...todo, status: currentStatus, progressValue, notes } : todo
                         );
                         const sortedData = sortTodos(revertedTodos);
                         todosRef.current = sortedData;
@@ -188,13 +184,11 @@ export function useTodoViewModel() {
         async (todoId: string, progressValue: string, notes: string = "", date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
-            
+
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId
-                        ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0", notes }
-                        : todo
+                    todo.id === todoId ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0", notes } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -225,9 +219,7 @@ export function useTodoViewModel() {
                             return prevTodos;
                         }
                         const revertedTodos = prevTodos.map((todo) =>
-                            todo.id === todoId
-                                ? { ...todo, status: TODO_STATUS.PENDING, progressValue, notes }
-                                : todo
+                            todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue, notes } : todo
                         );
                         const sortedData = sortTodos(revertedTodos);
                         todosRef.current = sortedData;
@@ -244,13 +236,11 @@ export function useTodoViewModel() {
         async (todoId: string, notes: string = "", date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
-            
+
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId
-                        ? { ...todo, status: TODO_STATUS.PENDING, progressValue: "0", notes }
-                        : todo
+                    todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue: "0", notes } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -292,7 +282,14 @@ export function useTodoViewModel() {
     );
 
     const handleSkipTodoWithConfirmation = useCallback(
-        (todoId: string, todoTitle: string, currentStatus: TodoStatus, progressValue: string, notes: string = "", date?: string) => {
+        (
+            todoId: string,
+            todoTitle: string,
+            currentStatus: TodoStatus,
+            progressValue: string,
+            notes: string = "",
+            date?: string
+        ) => {
             // Se o status for skipped, faz undo (volta para pending)
             if (currentStatus === TODO_STATUS.SKIPPED) {
                 handleUndoSkip(todoId, notes, date);
@@ -336,7 +333,7 @@ export function useTodoViewModel() {
         async (todoId: string, status: TodoStatus, progressValue: string, notes: string = "", date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
-            
+
             // Se o status for pending ou skipped, reseta progressValue para 0
             const finalProgressValue =
                 status === TODO_STATUS.PENDING || status === TODO_STATUS.SKIPPED ? "0" : progressValue;
@@ -350,9 +347,7 @@ export function useTodoViewModel() {
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId
-                        ? { ...todo, status, progressValue: finalProgressValue, notes }
-                        : todo
+                    todo.id === todoId ? { ...todo, status, progressValue: finalProgressValue, notes } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;

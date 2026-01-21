@@ -4,6 +4,9 @@ import { WeekSummary } from "../../interfaces/todo/summary.interface";
 
 const INITIAL_DAYS_COUNT = 200; // 100 dias para trás e 100 para frente
 const CONTAINER_PADDING = 3 * 2; // paddingHorizontal de 3 em cada lado
+const WIDTH_REDUCTION = 5; // Valor a ser removido da largura de cada item
+const GAP_BETWEEN_ITEMS = WIDTH_REDUCTION; // Gap equivalente ao valor removido
+const GAPS_TOTAL = GAP_BETWEEN_ITEMS * 6; // 6 gaps entre 7 itens
 
 export interface DayItem {
     date: Date;
@@ -56,8 +59,9 @@ const generateDay = (offset: number): DayItem => {
 };
 
 // Calcula a largura do item para que 7 dias caibam na tela
+// Reduz a largura e compensa com gaps entre os itens
 const getDayItemWidth = (screenWidth: number): number => {
-    const availableWidth = screenWidth - CONTAINER_PADDING;
+    const availableWidth = screenWidth - CONTAINER_PADDING - GAPS_TOTAL;
     return availableWidth / 7;
 };
 
@@ -65,12 +69,14 @@ const getDayItemWidth = (screenWidth: number): number => {
 const getWeekRangeFromOffset = (
     offsetX: number,
     daysList: DayItem[],
-    dayItemWidth: number
+    itemWidthWithGap: number
 ): { startDate: string; endDate: string } => {
-    const dayIndex = Math.round(offsetX / dayItemWidth);
+    // Calcula qual é o índice do primeiro dia visível baseado no offset
+    const dayIndex = Math.round(offsetX / itemWidthWithGap);
     const visibleDay = daysList[Math.max(0, Math.min(dayIndex, daysList.length - 1))];
 
     if (!visibleDay) {
+        // Fallback: retorna a semana atual
         const today = new Date();
         const dayOfWeek = today.getDay();
         const firstDayOfWeek = new Date(today);
@@ -84,6 +90,7 @@ const getWeekRangeFromOffset = (
         };
     }
 
+    // Calcula o primeiro dia da semana que contém esse dia (domingo)
     const targetDate = visibleDay.date;
     const dayOfWeek = targetDate.getDay();
     const firstDayOfWeek = new Date(targetDate);
@@ -127,39 +134,45 @@ export function useWeekCarouselViewModel({
 
     // Calcula as dimensões baseado na largura da tela
     const dayItemWidth = useMemo(() => getDayItemWidth(screenWidth), [screenWidth]);
-    const weekWidth = useMemo(() => dayItemWidth * 7, [dayItemWidth]);
+    const itemWidthWithGap = useMemo(() => dayItemWidth + GAP_BETWEEN_ITEMS, [dayItemWidth]);
+    const weekWidth = useMemo(() => itemWidthWithGap * 7, [itemWidthWithGap]);
 
-    // Calcula o índice inicial para mostrar a semana atual
+    // Calcula o índice inicial para mostrar a semana atual (domingo da semana atual)
     const initialScrollIndex = useMemo(() => {
         const todayIndex = daysList.findIndex((day) => day.isToday);
         if (todayIndex === -1) return 0;
 
         const today = new Date();
-        const dayOfWeek = today.getDay();
+        const dayOfWeek = today.getDay(); // 0 = domingo, 6 = sábado
+        // Calcula o índice do domingo da semana atual
         const firstDayOfWeekIndex = Math.max(0, todayIndex - dayOfWeek);
         return firstDayOfWeekIndex;
     }, [daysList]);
 
     // Scroll para mostrar a semana atual quando a lista é carregada
+    // Posiciona o domingo da semana atual como o primeiro item visível
     const scrollToCurrentWeek = useCallback(() => {
         if (hasScrolledToWeek.current || !weekDaysListRef.current) return;
 
-        const offset = initialScrollIndex * dayItemWidth;
-        const weekIndex = Math.floor(initialScrollIndex / 7);
-        const snappedOffset = weekIndex * weekWidth;
+        // Calcula o offset para posicionar o domingo da semana atual como primeiro item visível
+        // O initialScrollIndex já é o índice do domingo da semana atual
+        const offset = initialScrollIndex * itemWidthWithGap;
 
         requestAnimationFrame(() => {
             if (weekDaysListRef.current) {
                 weekDaysListRef.current.scrollToOffset({
-                    offset: snappedOffset,
+                    offset: offset,
                     animated: false,
                 });
                 hasScrolledToWeek.current = true;
             }
         });
-    }, [initialScrollIndex, dayItemWidth, weekWidth]);
+    }, [initialScrollIndex, itemWidthWithGap]);
 
-    // Carrega mais dias quando se aproxima das bordas
+    // Ref para debounce de detecção de semana durante o scroll
+    const scrollDetectionTimerRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
+    
+    // Carrega mais dias quando se aproxima das bordas e detecta mudança de semana durante o scroll
     const handleScroll = useCallback(
         (event: any) => {
             const offsetX = event.nativeEvent.contentOffset.x;
@@ -186,16 +199,43 @@ export function useWeekCarouselViewModel({
                 }
                 setDaysList((prev) => [...prev, ...newDays]);
             }
+            
+            // Detecta mudança de semana durante o scroll (throttled)
+            if (scrollDetectionTimerRef.current) {
+                clearTimeout(scrollDetectionTimerRef.current);
+            }
+            
+            scrollDetectionTimerRef.current = setTimeout(() => {
+                const weekRange = getWeekRangeFromOffset(offsetX, daysList, itemWidthWithGap);
+                
+                if (
+                    !currentWeekRangeRef.current ||
+                    currentWeekRangeRef.current.startDate !== weekRange.startDate ||
+                    currentWeekRangeRef.current.endDate !== weekRange.endDate
+                ) {
+                    // Detectou mudança de semana durante o scroll - inicia carregamento antecipado
+                    currentWeekRangeRef.current = weekRange;
+                    // Passa um flag indicando que é durante scroll para priorizar cache
+                    onWeekChange(weekRange.startDate, weekRange.endDate);
+                }
+            }, 30); // Throttle reduzido para 30ms - resposta mais rápida
         },
-        [daysList]
+        [daysList, itemWidthWithGap, onWeekChange]
     );
 
-    // Detecta quando o scroll termina e busca o summary da semana visível
+    // Detecta quando o scroll termina e confirma o summary da semana visível
     const handleScrollEnd = useCallback(
         (event: any) => {
             const offsetX = event.nativeEvent.contentOffset.x;
-            const weekRange = getWeekRangeFromOffset(offsetX, daysList, dayItemWidth);
+            const weekRange = getWeekRangeFromOffset(offsetX, daysList, itemWidthWithGap);
 
+            // Limpa o timer de detecção do scroll
+            if (scrollDetectionTimerRef.current) {
+                clearTimeout(scrollDetectionTimerRef.current);
+                scrollDetectionTimerRef.current = null;
+            }
+
+            // Garante que a semana final está sincronizada (pode já ter sido detectada durante o scroll)
             if (
                 !currentWeekRangeRef.current ||
                 currentWeekRangeRef.current.startDate !== weekRange.startDate ||
@@ -205,7 +245,7 @@ export function useWeekCarouselViewModel({
                 onWeekChange(weekRange.startDate, weekRange.endDate);
             }
         },
-        [daysList, dayItemWidth, onWeekChange]
+        [daysList, itemWidthWithGap, onWeekChange]
     );
 
     // Verifica se um dia está completo (todos os todos foram concluídos)
@@ -233,7 +273,9 @@ export function useWeekCarouselViewModel({
         weekDaysListRef,
         hasScrolledToWeek,
         dayItemWidth,
+        itemWidthWithGap,
         weekWidth,
+        gapBetweenItems: GAP_BETWEEN_ITEMS,
         initialScrollIndex,
         scrollToCurrentWeek,
         handleScroll,

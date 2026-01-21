@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useCallback } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { WeekSummary } from "../interfaces/todo/summary.interface";
@@ -20,7 +20,9 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
         weekDaysListRef,
         hasScrolledToWeek,
         dayItemWidth,
+        itemWidthWithGap,
         weekWidth,
+        gapBetweenItems,
         scrollToCurrentWeek,
         handleScroll,
         handleScrollEnd,
@@ -38,9 +40,9 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
             const isComplete = isDayComplete(item.dateString);
 
             return (
-                <View style={{ alignItems: "center", width: dayItemWidth }}>
+                <View style={{ alignItems: "center", width: dayItemWidth, marginRight: gapBetweenItems }}>
                     {isComplete && (
-                        <Ionicons name="trophy" size={14} color="#FFD700" style={styles.crownIcon} />
+                        <MaterialIcons name="emoji-events" size={14} color="#FFD700" style={styles.crownIcon} />
                     )}
                     <TouchableOpacity
                         style={[
@@ -63,7 +65,7 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
                 </View>
             );
         },
-        [selectedDate, isDayComplete, onDateSelect, dayItemWidth]
+        [selectedDate, isDayComplete, onDateSelect, dayItemWidth, gapBetweenItems]
     );
 
     return (
@@ -96,12 +98,12 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
                     }
                 }}
                 getItemLayout={(data, index) => ({
-                    length: dayItemWidth,
-                    offset: dayItemWidth * index,
+                    length: itemWidthWithGap,
+                    offset: itemWidthWithGap * index,
                     index,
                 })}
                 onScrollToIndexFailed={(info) => {
-                    const offset = info.index * dayItemWidth;
+                    const offset = info.index * itemWidthWithGap;
                     setTimeout(() => {
                         weekDaysListRef.current?.scrollToOffset({
                             offset: offset,
@@ -134,7 +136,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 1,
         borderRadius: 12,
         backgroundColor: colors.gray[100],
-        marginRight: 0,
     },
     dayButtonActive: {
         backgroundColor: colors.primary,

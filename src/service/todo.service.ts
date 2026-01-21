@@ -7,9 +7,14 @@ export const getTodosByDate = async (date: string): Promise<Todo[]> => {
     return data || [];
 };
 
-export const getTodoSummary = async (startDate: string, endDate: string): Promise<WeekSummary> => {
+export const getTodoSummary = async (
+    startDate: string,
+    endDate: string,
+    signal?: AbortSignal
+): Promise<WeekSummary> => {
     const { data } = await planlyApiClient.get<WeekSummary>(
-        `/todo/summary?startDate=${startDate}&endDate=${endDate}`
+        `/todo/summary?startDate=${startDate}&endDate=${endDate}`,
+        { signal }
     );
     return data || [];
 };

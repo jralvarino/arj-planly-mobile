@@ -30,15 +30,15 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 const getTodayDate = (): string => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
 
 const formatDate = (date: Date): string => {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
 
@@ -65,21 +65,176 @@ export default function HomeScreen() {
     const [weekSummary, setWeekSummary] = useState<WeekSummary>([]);
     const [loadingSummary, setLoadingSummary] = useState(false);
     const currentWeekRangeRef = useRef<{ startDate: string; endDate: string } | null>(null);
+    
+    // Cache de summaries por semana (chave: "startDate-endDate")
+    const weekSummaryCacheRef = useRef<Map<string, WeekSummary>>(new Map());
+    
+    // Ref para cancelar requisições pendentes
+    const abortControllerRef = useRef<AbortController | null>(null);
+    
+    // Ref para o timer de debounce
+    const debounceTimerRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
 
-    // Busca o summary da semana
-    const fetchWeekSummary = useCallback(async (startDate: string, endDate: string) => {
-        try {
-            setLoadingSummary(true);
-            const summary = await getTodoSummary(startDate, endDate);
-            setWeekSummary(summary);
-            currentWeekRangeRef.current = { startDate, endDate };
-        } catch (err) {
-            console.error("Error fetching week summary:", err);
-            setWeekSummary([]);
-        } finally {
-            setLoadingSummary(false);
-        }
+    // Função auxiliar para calcular datas adjacentes
+    const getAdjacentWeekRanges = useCallback((startDate: string, endDate: string) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        // Semana anterior (7 dias antes)
+        const prevStart = new Date(start);
+        prevStart.setDate(start.getDate() - 7);
+        const prevEnd = new Date(end);
+        prevEnd.setDate(end.getDate() - 7);
+        
+        // Semana seguinte (7 dias depois)
+        const nextStart = new Date(start);
+        nextStart.setDate(start.getDate() + 7);
+        const nextEnd = new Date(end);
+        nextEnd.setDate(end.getDate() + 7);
+        
+        return {
+            prev: { startDate: formatDate(prevStart), endDate: formatDate(prevEnd) },
+            next: { startDate: formatDate(nextStart), endDate: formatDate(nextEnd) },
+        };
     }, []);
+
+    // Ref para o summary atual (para acesso síncrono durante render)
+    const currentWeekSummaryRef = useRef<WeekSummary>([]);
+    
+    // Busca o summary da semana com cache e debounce
+    const fetchWeekSummary = useCallback(async (startDate: string, endDate: string, skipCache: boolean = false) => {
+        const cacheKey = `${startDate}-${endDate}`;
+        
+        // Atualiza a referência da semana atual imediatamente
+        currentWeekRangeRef.current = { startDate, endDate };
+        
+        // Verifica cache primeiro e atualiza IMEDIATAMENTE (a menos que skipCache seja true)
+        if (!skipCache && weekSummaryCacheRef.current.has(cacheKey)) {
+            const cachedSummary = weekSummaryCacheRef.current.get(cacheKey)!;
+            
+            // Atualiza o ref síncronamente (acesso imediato)
+            currentWeekSummaryRef.current = cachedSummary;
+            
+            // Atualiza o estado imediatamente (sem debounce quando há cache)
+            // Cria uma nova referência profunda do array e objetos para forçar re-render
+            // Adiciona um timestamp para garantir que seja sempre uma nova referência
+            const timestamp = Date.now();
+            const newSummary: WeekSummary = cachedSummary.map((day, index) => ({
+                date: day.date,
+                total: { ...day.total },
+                categories: day.categories.map(cat => ({ ...cat })),
+                // Adiciona propriedade temporária para forçar nova referência (será ignorada pelo componente)
+                _cacheTimestamp: timestamp + index
+            } as any));
+            
+            // Atualiza estado imediatamente - cria nova referência para forçar re-render
+            setWeekSummary(newSummary);
+            
+            // Pre-carrega semanas adjacentes em background (não bloqueia a atualização)
+            setTimeout(() => {
+                const adjacent = getAdjacentWeekRanges(startDate, endDate);
+                const prevKey = `${adjacent.prev.startDate}-${adjacent.prev.endDate}`;
+                const nextKey = `${adjacent.next.startDate}-${adjacent.next.endDate}`;
+                
+                if (!weekSummaryCacheRef.current.has(prevKey)) {
+                    getTodoSummary(adjacent.prev.startDate, adjacent.prev.endDate)
+                        .then(summary => {
+                            weekSummaryCacheRef.current.set(prevKey, summary);
+                        })
+                        .catch(() => {});
+                }
+                if (!weekSummaryCacheRef.current.has(nextKey)) {
+                    getTodoSummary(adjacent.next.startDate, adjacent.next.endDate)
+                        .then(summary => {
+                            weekSummaryCacheRef.current.set(nextKey, summary);
+                        })
+                        .catch(() => {});
+                }
+            }, 0);
+            
+            return;
+        }
+        
+        // Se não tem cache, mantém os dados anteriores visíveis (não limpa)
+        // e busca do servidor com debounce
+        
+        // Cancela requisição anterior se existir
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        
+        // Limpa timer de debounce anterior
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+        
+        // Debounce reduzido para 100ms - resposta mais rápida
+        debounceTimerRef.current = setTimeout(async () => {
+            // Verifica novamente se ainda estamos nesta semana
+            if (currentWeekRangeRef.current?.startDate !== startDate || 
+                currentWeekRangeRef.current?.endDate !== endDate) {
+                // Semana mudou durante o debounce, ignora esta requisição
+                return;
+            }
+            
+            try {
+                setLoadingSummary(true);
+                
+                // Cria novo AbortController para esta requisição
+                const abortController = new AbortController();
+                abortControllerRef.current = abortController;
+                
+                const summary = await getTodoSummary(startDate, endDate, abortController.signal);
+                
+                // Verifica se a requisição foi cancelada
+                if (abortController.signal.aborted) {
+                    return;
+                }
+                
+                // Verifica novamente se ainda estamos nesta semana antes de atualizar
+                if (currentWeekRangeRef.current?.startDate === startDate && 
+                    currentWeekRangeRef.current?.endDate === endDate) {
+                    // Atualiza cache, ref e estado
+                    weekSummaryCacheRef.current.set(cacheKey, summary);
+                    currentWeekSummaryRef.current = summary;
+                    setWeekSummary([...summary]); // Cópia para forçar atualização
+                    
+                    // Pre-carrega semanas adjacentes em background após carregar a atual
+                    const adjacent = getAdjacentWeekRanges(startDate, endDate);
+                    const prevKey = `${adjacent.prev.startDate}-${adjacent.prev.endDate}`;
+                    const nextKey = `${adjacent.next.startDate}-${adjacent.next.endDate}`;
+                    
+                    if (!weekSummaryCacheRef.current.has(prevKey)) {
+                        getTodoSummary(adjacent.prev.startDate, adjacent.prev.endDate)
+                            .then(adjSummary => {
+                                if (!abortController.signal.aborted) {
+                                    weekSummaryCacheRef.current.set(prevKey, adjSummary);
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                    if (!weekSummaryCacheRef.current.has(nextKey)) {
+                        getTodoSummary(adjacent.next.startDate, adjacent.next.endDate)
+                            .then(adjSummary => {
+                                if (!abortController.signal.aborted) {
+                                    weekSummaryCacheRef.current.set(nextKey, adjSummary);
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                }
+            } catch (err: any) {
+                // Se foi cancelada, não faz nada
+                if (abortControllerRef.current?.signal.aborted || err?.name === 'AbortError' || err?.code === 'ERR_CANCELED') {
+                    return;
+                }
+                console.error("Error fetching week summary:", err);
+                // Não limpa o summary em caso de erro, mantém o anterior
+            } finally {
+                setLoadingSummary(false);
+            }
+        }, 100);
+    }, [getAdjacentWeekRanges]);
 
     // Anima quando os todos mudam de posição ou status e recarrega o summary
     useEffect(() => {
@@ -117,12 +272,11 @@ export default function HomeScreen() {
                     },
                 });
 
-                // Recarrega o summary quando o status de algum todo muda
+                // Recarrega o summary quando o status de algum todo muda (com skipCache para forçar atualização)
                 if (hasStatusChange && currentWeekRangeRef.current) {
-                    fetchWeekSummary(
-                        currentWeekRangeRef.current.startDate,
-                        currentWeekRangeRef.current.endDate
-                    );
+                    setTimeout(() => {
+                        fetchWeekSummary(currentWeekRangeRef.current!.startDate, currentWeekRangeRef.current!.endDate, true);
+                    }, 1000);
                 }
             }
         }
@@ -155,13 +309,8 @@ export default function HomeScreen() {
     // Callback quando a semana muda no carrossel
     const handleWeekChange = useCallback(
         (startDate: string, endDate: string) => {
-            if (
-                !currentWeekRangeRef.current ||
-                currentWeekRangeRef.current.startDate !== startDate ||
-                currentWeekRangeRef.current.endDate !== endDate
-            ) {
-                fetchWeekSummary(startDate, endDate);
-            }
+            // Sempre chama fetchWeekSummary, que já tem lógica interna para cache e evitar duplicatas
+            fetchWeekSummary(startDate, endDate);
         },
         [fetchWeekSummary]
     );
@@ -175,7 +324,10 @@ export default function HomeScreen() {
         const lastDayOfWeek = new Date(firstDayOfWeek);
         lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
 
-        fetchWeekSummary(formatDate(firstDayOfWeek), formatDate(lastDayOfWeek));
+        const startDateStr = formatDate(firstDayOfWeek);
+        const endDateStr = formatDate(lastDayOfWeek);
+        currentWeekRangeRef.current = { startDate: startDateStr, endDate: endDateStr };
+        fetchWeekSummary(startDateStr, endDateStr);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -223,7 +375,14 @@ export default function HomeScreen() {
                             handleToggleTodo(todoId, status, progressValue, notes, date || selectedDate)
                         }
                         onSkip={(todoId, title, status, progressValue, notes, date) =>
-                            handleSkipTodoWithConfirmation(todoId, title, status, progressValue, notes, date || selectedDate)
+                            handleSkipTodoWithConfirmation(
+                                todoId,
+                                title,
+                                status,
+                                progressValue,
+                                notes,
+                                date || selectedDate
+                            )
                         }
                         onSave={(todoId, status, progressValue, notes, date) =>
                             handleSaveTodo(todoId, status, progressValue, notes, date || selectedDate)
@@ -423,7 +582,7 @@ const styles = StyleSheet.create({
     separator: {
         flexDirection: "row",
         alignItems: "center",
-        marginTop: 4,   
+        marginTop: 4,
         marginVertical: 10,
         marginHorizontal: 16,
     },
