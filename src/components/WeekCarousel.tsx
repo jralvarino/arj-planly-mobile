@@ -42,6 +42,8 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
             const dayColor = getDayColor(item.dateString);
             const isSelected = selectedDate === item.dateString;
             
+
+            
             // Determina se o texto deve ser branco ou escuro baseado na cor de fundo
             // A cor de fundo sempre reflete o progresso, não muda quando selecionado
             const isColoredBackground = dayColor !== colors.gray[100];
@@ -50,8 +52,12 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
 
             return (
                 <View style={{ alignItems: "center", width: dayItemWidth, marginRight: gapBetweenItems }}>
-                    {isComplete && (
-                        <MaterialIcons name="emoji-events" size={14} color="#FFD700" style={styles.crownIcon} />
+                    { (
+                        <View style={styles.crownContainer}>
+                            {isComplete ? (
+                                <MaterialIcons name="emoji-events" size={14} color="#FFD700" />
+                            ) : null}
+                        </View>
                     )}
                     <TouchableOpacity
                         style={[
@@ -134,14 +140,21 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
 
 const styles = StyleSheet.create({
     weekCarouselContainer: {
-        paddingVertical: 7,
+        paddingVertical: 3,
         paddingHorizontal: 3,
         backgroundColor: colors.background,
     },
     weekCarouselContent: {
         paddingHorizontal: 0,
     },
+    crownContainer: {
+        height: 13, // Altura fixa para manter todos os botões alinhados
+        justifyContent: "flex-end",
+        alignItems: "center",
+        marginBottom: 4,
+    },
     crownIcon: {
+        // Removido marginBottom para evitar desalinhamento
         marginBottom: 4,
     },
     dayButton: {
