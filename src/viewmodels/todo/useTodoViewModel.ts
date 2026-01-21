@@ -24,29 +24,41 @@ export function useTodoViewModel() {
     const [refreshing, setRefreshing] = useState(false);
     const [updating, setUpdating] = useState(false);
     const soundRef = useRef<Audio.Sound | null>(null);
+    const trumpetsSoundRef = useRef<Audio.Sound | null>(null);
     const todosRef = useRef<Todo[]>([]);
 
-    // Carrega o som quando o componente é montado
+    // Carrega os sons quando o componente é montado
     useEffect(() => {
-        const loadSound = async () => {
+        const loadSounds = async () => {
             try {
                 await Audio.setAudioModeAsync({
                     playsInSilentModeIOS: true,
                     allowsRecordingIOS: false,
                     staysActiveInBackground: false,
                 });
+                
+                // Carrega o som padrão de todo completado
                 const { sound } = await Audio.Sound.createAsync(require("../../../assets/sounds/todo-completed.mp3"));
                 soundRef.current = sound;
+                
+                // Carrega o som de trombetas para quando o último todo é completado
+                const { sound: trumpetsSound } = await Audio.Sound.createAsync(
+                    require("../../../assets/sounds/trumpets-completed.mp3")
+                );
+                trumpetsSoundRef.current = trumpetsSound;
             } catch (err) {
                 console.log("Could not load sound:", err);
             }
         };
-        loadSound();
+        loadSounds();
 
         return () => {
-            // Limpa o som quando o componente é desmontado
+            // Limpa os sons quando o componente é desmontado
             if (soundRef.current) {
                 soundRef.current.unloadAsync().catch(() => {});
+            }
+            if (trumpetsSoundRef.current) {
+                trumpetsSoundRef.current.unloadAsync().catch(() => {});
             }
         };
     }, []);
@@ -137,6 +149,13 @@ export function useTodoViewModel() {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
 
+            // Verifica se é o último todo do dia ANTES de atualizar (quando está completando)
+            let isLastTodo = false;
+            if (newStatus === TODO_STATUS.DONE && currentStatus === TODO_STATUS.PENDING) {
+                const pendingTodos = todosRef.current.filter((t) => t.status === TODO_STATUS.PENDING);
+                isLastTodo = pendingTodos.length === 1 && pendingTodos[0].id === todoId;
+            }
+
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
@@ -157,8 +176,24 @@ export function useTodoViewModel() {
                     console.log("Haptic feedback not available");
                 }
 
-                // Toca som customizado
-                if (soundRef.current) {
+                // Toca som apropriado
+                if (isLastTodo && trumpetsSoundRef.current) {
+                    // Toca trombetas quando é o último todo
+                    try {
+                        await trumpetsSoundRef.current.replayAsync();
+                    } catch (soundError) {
+                        console.log("Could not play trumpets sound:", soundError);
+                        // Fallback para som padrão
+                        if (soundRef.current) {
+                            try {
+                                await soundRef.current.replayAsync();
+                            } catch (fallbackError) {
+                                console.log("Could not play fallback sound:", fallbackError);
+                            }
+                        }
+                    }
+                } else if (soundRef.current) {
+                    // Toca som padrão para outros todos
                     try {
                         await soundRef.current.replayAsync();
                     } catch (soundError) {
@@ -364,6 +399,13 @@ export function useTodoViewModel() {
             const previousProgressValue = previousTodo?.progressValue || "0";
             const previousNotes = previousTodo?.notes || "";
 
+            // Verifica se é o último todo do dia ANTES de atualizar (quando está completando)
+            let isLastTodo = false;
+            if (status === TODO_STATUS.DONE && previousStatus !== TODO_STATUS.DONE) {
+                const pendingTodos = todosRef.current.filter((t) => t.status === TODO_STATUS.PENDING);
+                isLastTodo = pendingTodos.length === 1 && pendingTodos[0].id === todoId;
+            }
+
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
@@ -376,7 +418,20 @@ export function useTodoViewModel() {
 
             // Toca som/haptic quando o Todo é concluído
             if (status === TODO_STATUS.DONE) {
-                await playCompletionSound();
+                if (isLastTodo && trumpetsSoundRef.current) {
+                    // Toca trombetas quando é o último todo
+                    try {
+                        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        await trumpetsSoundRef.current.replayAsync();
+                    } catch (soundError) {
+                        console.log("Could not play trumpets sound:", soundError);
+                        // Fallback para som padrão
+                        await playCompletionSound();
+                    }
+                } else {
+                    // Toca som padrão para outros todos
+                    await playCompletionSound();
+                }
             }
 
             // Chama o backend em background (não bloqueia a UI)
