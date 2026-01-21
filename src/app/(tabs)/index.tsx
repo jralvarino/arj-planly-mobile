@@ -290,10 +290,13 @@ export default function HomeScreen() {
                 // Invalida o cache e atualiza imediatamente
                 if (hasStatusChange) {
                     // Calcula qual semana contém a data selecionada (data do todo que mudou)
+                    // Semana começa na segunda-feira
                     const todoDate = new Date(selectedDate);
-                    const dayOfWeek = todoDate.getDay();
+                    const dayOfWeek = todoDate.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
                     const firstDayOfWeek = new Date(todoDate);
-                    firstDayOfWeek.setDate(todoDate.getDate() - dayOfWeek);
+                    // Ajusta para segunda-feira: se domingo (0), volta 6 dias; caso contrário, volta (dayOfWeek - 1) dias
+                    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    firstDayOfWeek.setDate(todoDate.getDate() - daysToMonday);
                     const lastDayOfWeek = new Date(firstDayOfWeek);
                     lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
 
@@ -381,12 +384,14 @@ export default function HomeScreen() {
         [fetchWeekSummary]
     );
 
-    // Busca o summary da semana inicial quando o componente carrega
+    // Busca o summary da semana inicial quando o componente carrega (começando na segunda-feira)
     useEffect(() => {
         const today = new Date();
-        const dayOfWeek = today.getDay();
+        const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
         const firstDayOfWeek = new Date(today);
-        firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
+        // Ajusta para segunda-feira: se domingo (0), volta 6 dias; caso contrário, volta (dayOfWeek - 1) dias
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        firstDayOfWeek.setDate(today.getDate() - daysToMonday);
         const lastDayOfWeek = new Date(firstDayOfWeek);
         lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
 
@@ -504,6 +509,7 @@ export default function HomeScreen() {
                 onDateSelect={setSelectedDate}
                 weekSummary={weekSummary}
                 onWeekChange={handleWeekChange}
+                selectedCategoryId={selectedCategoryId}
             />
 
             {/* Filtro de Categorias */}

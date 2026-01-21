@@ -10,9 +10,10 @@ interface WeekCarouselProps {
     onDateSelect: (date: string) => void;
     weekSummary: WeekSummary;
     onWeekChange: (startDate: string, endDate: string) => void;
+    selectedCategoryId?: string | null;
 }
 
-export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekChange }: WeekCarouselProps) {
+export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekChange, selectedCategoryId }: WeekCarouselProps) {
     const { width: screenWidth } = useWindowDimensions();
 
     const {
@@ -34,6 +35,7 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
         onDateSelect,
         onWeekChange,
         screenWidth,
+        selectedCategoryId,
     });
 
     const renderDayItem = useCallback(

@@ -78,11 +78,13 @@ const getWeekRangeFromOffset = (
     const visibleDay = daysList[Math.max(0, Math.min(dayIndex, daysList.length - 1))];
 
     if (!visibleDay) {
-        // Fallback: retorna a semana atual
+        // Fallback: retorna a semana atual (começando na segunda-feira)
         const today = new Date();
-        const dayOfWeek = today.getDay();
+        const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
         const firstDayOfWeek = new Date(today);
-        firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
+        // Ajusta para segunda-feira: se domingo (0), volta 6 dias; caso contrário, volta (dayOfWeek - 1) dias
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        firstDayOfWeek.setDate(today.getDate() - daysToMonday);
         const lastDayOfWeek = new Date(firstDayOfWeek);
         lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
 
@@ -92,11 +94,13 @@ const getWeekRangeFromOffset = (
         };
     }
 
-    // Calcula o primeiro dia da semana que contém esse dia (domingo)
+    // Calcula o primeiro dia da semana que contém esse dia (segunda-feira)
     const targetDate = visibleDay.date;
-    const dayOfWeek = targetDate.getDay();
+    const dayOfWeek = targetDate.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
     const firstDayOfWeek = new Date(targetDate);
-    firstDayOfWeek.setDate(targetDate.getDate() - dayOfWeek);
+    // Ajusta para segunda-feira: se domingo (0), volta 6 dias; caso contrário, volta (dayOfWeek - 1) dias
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    firstDayOfWeek.setDate(targetDate.getDate() - daysToMonday);
     const lastDayOfWeek = new Date(firstDayOfWeek);
     lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
 
@@ -112,6 +116,7 @@ interface UseWeekCarouselViewModelProps {
     onDateSelect: (date: string) => void;
     onWeekChange: (startDate: string, endDate: string) => void;
     screenWidth: number;
+    selectedCategoryId?: string | null;
 }
 
 export function useWeekCarouselViewModel({
@@ -120,6 +125,7 @@ export function useWeekCarouselViewModel({
     onDateSelect,
     onWeekChange,
     screenWidth,
+    selectedCategoryId,
 }: UseWeekCarouselViewModelProps) {
     const weekDaysListRef = useRef<FlatList>(null);
     const hasScrolledToWeek = useRef(false);
@@ -139,25 +145,27 @@ export function useWeekCarouselViewModel({
     const itemWidthWithGap = useMemo(() => dayItemWidth + GAP_BETWEEN_ITEMS, [dayItemWidth]);
     const weekWidth = useMemo(() => itemWidthWithGap * 7, [itemWidthWithGap]);
 
-    // Calcula o índice inicial para mostrar a semana atual (domingo da semana atual)
+    // Calcula o índice inicial para mostrar a semana atual (segunda-feira da semana atual)
     const initialScrollIndex = useMemo(() => {
         const todayIndex = daysList.findIndex((day) => day.isToday);
         if (todayIndex === -1) return 0;
 
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0 = domingo, 6 = sábado
-        // Calcula o índice do domingo da semana atual
-        const firstDayOfWeekIndex = Math.max(0, todayIndex - dayOfWeek);
+        const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
+        // Calcula o índice da segunda-feira da semana atual
+        // Se domingo (0), segunda-feira está 6 dias atrás; caso contrário, está (dayOfWeek - 1) dias atrás
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const firstDayOfWeekIndex = Math.max(0, todayIndex - daysToMonday);
         return firstDayOfWeekIndex;
     }, [daysList]);
 
     // Scroll para mostrar a semana atual quando a lista é carregada
-    // Posiciona o domingo da semana atual como o primeiro item visível
+    // Posiciona a segunda-feira da semana atual como o primeiro item visível
     const scrollToCurrentWeek = useCallback(() => {
         if (hasScrolledToWeek.current || !weekDaysListRef.current) return;
 
-        // Calcula o offset para posicionar o domingo da semana atual como primeiro item visível
-        // O initialScrollIndex já é o índice do domingo da semana atual
+        // Calcula o offset para posicionar a segunda-feira da semana atual como primeiro item visível
+        // O initialScrollIndex já é o índice da segunda-feira da semana atual
         const offset = initialScrollIndex * itemWidthWithGap;
 
         requestAnimationFrame(() => {
@@ -255,9 +263,18 @@ export function useWeekCarouselViewModel({
         (dateString: string): boolean => {
             const daySummary = weekSummary.find((day) => day.date === dateString);
             if (!daySummary) return false;
+            
+            // Se uma categoria está selecionada, usa os dados da categoria
+            if (selectedCategoryId) {
+                const categorySummary = daySummary.categories.find((cat) => cat.categoryId === selectedCategoryId);
+                if (!categorySummary) return false;
+                return categorySummary.done === categorySummary.total && categorySummary.total > 0;
+            }
+            
+            // Caso contrário, usa o total geral
             return daySummary.total.done === daySummary.total.total && daySummary.total.total > 0;
         },
-        [weekSummary]
+        [weekSummary, selectedCategoryId]
     );
 
     // Calcula a cor do dia baseado na quantidade de todos completados
@@ -269,8 +286,22 @@ export function useWeekCarouselViewModel({
                 return colors.gray[100];
             }
             
-            const completed = daySummary.total.done;
-            const total = daySummary.total.total;
+            let completed: number;
+            let total: number;
+            
+            // Se uma categoria está selecionada, usa os dados da categoria
+            if (selectedCategoryId) {
+                const categorySummary = daySummary.categories.find((cat) => cat.categoryId === selectedCategoryId);
+                if (!categorySummary) {
+                    return colors.gray[100];
+                }
+                completed = categorySummary.done;
+                total = categorySummary.total;
+            } else {
+                // Caso contrário, usa o total geral
+                completed = daySummary.total.done;
+                total = daySummary.total.total;
+            }
             
             // Se nenhum todo foi completado, retorna a cor cinza padrão
             if (completed === 0 || total === 0) {
@@ -282,7 +313,7 @@ export function useWeekCarouselViewModel({
             
             return calculatedColor;
         },
-        [weekSummary]
+        [weekSummary, selectedCategoryId]
     );
 
     // Inicializa o scroll quando a lista estiver pronta
