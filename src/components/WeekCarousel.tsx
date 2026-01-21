@@ -134,7 +134,7 @@ export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekCh
 
 const styles = StyleSheet.create({
     weekCarouselContainer: {
-        paddingVertical: 12,
+        paddingVertical: 7,
         paddingHorizontal: 3,
         backgroundColor: colors.background,
     },
