@@ -6,6 +6,7 @@ import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
+import { getTodayDate } from "../utils/dateUtils";
 
 interface TodoCardProps {
     todo: Todo;
@@ -56,16 +57,7 @@ export function TodoCard({
     const category = categories.find((cat) => cat.id === todo.categoryId);
 
     // Verifica se a data selecionada é futura (usa timezone local)
-    const getTodayDateLocal = (): string => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-    
-    // Normaliza a data selecionada e compara com a data de hoje
-    const todayDate = getTodayDateLocal();
+    const todayDate = getTodayDate();
     const normalizedSelectedDate = selectedDate ? selectedDate.split('T')[0] : todayDate;
     const isFutureDate = normalizedSelectedDate > todayDate;
 
