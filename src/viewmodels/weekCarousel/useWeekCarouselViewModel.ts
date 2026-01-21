@@ -1,0 +1,245 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FlatList } from "react-native";
+import { WeekSummary } from "../../interfaces/todo/summary.interface";
+
+const INITIAL_DAYS_COUNT = 200; // 100 dias para trás e 100 para frente
+const CONTAINER_PADDING = 3 * 2; // paddingHorizontal de 3 em cada lado
+
+export interface DayItem {
+    date: Date;
+    dateString: string;
+    dayName: string;
+    dayNumber: string;
+    isToday: boolean;
+    index: number;
+}
+
+const getTodayDate = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getDayName = (date: Date): string => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return days[date.getDay()];
+};
+
+const getDayNumber = (date: Date): string => {
+    return date.getDate().toString();
+};
+
+const generateDay = (offset: number): DayItem => {
+    const today = new Date();
+    const date = new Date(today);
+    date.setDate(today.getDate() + offset);
+    const dateString = formatDate(date);
+    const isToday = dateString === getTodayDate();
+
+    return {
+        date,
+        dateString,
+        dayName: getDayName(date),
+        dayNumber: getDayNumber(date),
+        isToday,
+        index: offset,
+    };
+};
+
+// Calcula a largura do item para que 7 dias caibam na tela
+const getDayItemWidth = (screenWidth: number): number => {
+    const availableWidth = screenWidth - CONTAINER_PADDING;
+    return availableWidth / 7;
+};
+
+// Calcula o início e fim da semana baseado no offset do scroll
+const getWeekRangeFromOffset = (
+    offsetX: number,
+    daysList: DayItem[],
+    dayItemWidth: number
+): { startDate: string; endDate: string } => {
+    const dayIndex = Math.round(offsetX / dayItemWidth);
+    const visibleDay = daysList[Math.max(0, Math.min(dayIndex, daysList.length - 1))];
+
+    if (!visibleDay) {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const firstDayOfWeek = new Date(today);
+        firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
+        const lastDayOfWeek = new Date(firstDayOfWeek);
+        lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+
+        return {
+            startDate: formatDate(firstDayOfWeek),
+            endDate: formatDate(lastDayOfWeek),
+        };
+    }
+
+    const targetDate = visibleDay.date;
+    const dayOfWeek = targetDate.getDay();
+    const firstDayOfWeek = new Date(targetDate);
+    firstDayOfWeek.setDate(targetDate.getDate() - dayOfWeek);
+    const lastDayOfWeek = new Date(firstDayOfWeek);
+    lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+
+    return {
+        startDate: formatDate(firstDayOfWeek),
+        endDate: formatDate(lastDayOfWeek),
+    };
+};
+
+interface UseWeekCarouselViewModelProps {
+    selectedDate: string;
+    weekSummary: WeekSummary;
+    onDateSelect: (date: string) => void;
+    onWeekChange: (startDate: string, endDate: string) => void;
+    screenWidth: number;
+}
+
+export function useWeekCarouselViewModel({
+    selectedDate,
+    weekSummary,
+    onDateSelect,
+    onWeekChange,
+    screenWidth,
+}: UseWeekCarouselViewModelProps) {
+    const weekDaysListRef = useRef<FlatList>(null);
+    const hasScrolledToWeek = useRef(false);
+    const currentWeekRangeRef = useRef<{ startDate: string; endDate: string } | null>(null);
+    
+    const [daysList, setDaysList] = useState<DayItem[]>(() => {
+        const days = [];
+        const startOffset = -Math.floor(INITIAL_DAYS_COUNT / 2);
+        for (let i = 0; i < INITIAL_DAYS_COUNT; i++) {
+            days.push(generateDay(startOffset + i));
+        }
+        return days;
+    });
+
+    // Calcula as dimensões baseado na largura da tela
+    const dayItemWidth = useMemo(() => getDayItemWidth(screenWidth), [screenWidth]);
+    const weekWidth = useMemo(() => dayItemWidth * 7, [dayItemWidth]);
+
+    // Calcula o índice inicial para mostrar a semana atual
+    const initialScrollIndex = useMemo(() => {
+        const todayIndex = daysList.findIndex((day) => day.isToday);
+        if (todayIndex === -1) return 0;
+
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const firstDayOfWeekIndex = Math.max(0, todayIndex - dayOfWeek);
+        return firstDayOfWeekIndex;
+    }, [daysList]);
+
+    // Scroll para mostrar a semana atual quando a lista é carregada
+    const scrollToCurrentWeek = useCallback(() => {
+        if (hasScrolledToWeek.current || !weekDaysListRef.current) return;
+
+        const offset = initialScrollIndex * dayItemWidth;
+        const weekIndex = Math.floor(initialScrollIndex / 7);
+        const snappedOffset = weekIndex * weekWidth;
+
+        requestAnimationFrame(() => {
+            if (weekDaysListRef.current) {
+                weekDaysListRef.current.scrollToOffset({
+                    offset: snappedOffset,
+                    animated: false,
+                });
+                hasScrolledToWeek.current = true;
+            }
+        });
+    }, [initialScrollIndex, dayItemWidth, weekWidth]);
+
+    // Carrega mais dias quando se aproxima das bordas
+    const handleScroll = useCallback(
+        (event: any) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const contentWidth = event.nativeEvent.contentSize.width;
+
+            if (offsetX < contentWidth * 0.2) {
+                const firstDay = daysList[0];
+                if (firstDay && firstDay.index < -500) return;
+
+                const newDays: DayItem[] = [];
+                for (let i = 50; i > 0; i--) {
+                    newDays.push(generateDay(firstDay.index - i));
+                }
+                setDaysList((prev) => [...newDays, ...prev]);
+            }
+
+            if (offsetX > contentWidth * 0.8) {
+                const lastDay = daysList[daysList.length - 1];
+                if (lastDay && lastDay.index > 500) return;
+
+                const newDays: DayItem[] = [];
+                for (let i = 1; i <= 50; i++) {
+                    newDays.push(generateDay(lastDay.index + i));
+                }
+                setDaysList((prev) => [...prev, ...newDays]);
+            }
+        },
+        [daysList]
+    );
+
+    // Detecta quando o scroll termina e busca o summary da semana visível
+    const handleScrollEnd = useCallback(
+        (event: any) => {
+            const offsetX = event.nativeEvent.contentOffset.x;
+            const weekRange = getWeekRangeFromOffset(offsetX, daysList, dayItemWidth);
+
+            if (
+                !currentWeekRangeRef.current ||
+                currentWeekRangeRef.current.startDate !== weekRange.startDate ||
+                currentWeekRangeRef.current.endDate !== weekRange.endDate
+            ) {
+                currentWeekRangeRef.current = weekRange;
+                onWeekChange(weekRange.startDate, weekRange.endDate);
+            }
+        },
+        [daysList, dayItemWidth, onWeekChange]
+    );
+
+    // Verifica se um dia está completo (todos os todos foram concluídos)
+    const isDayComplete = useCallback(
+        (dateString: string): boolean => {
+            const daySummary = weekSummary.find((day) => day.date === dateString);
+            if (!daySummary) return false;
+            return daySummary.total.done === daySummary.total.total && daySummary.total.total > 0;
+        },
+        [weekSummary]
+    );
+
+    // Inicializa o scroll quando a lista estiver pronta
+    useEffect(() => {
+        if (daysList.length > 0 && initialScrollIndex > 0) {
+            const timeoutId = setTimeout(() => {
+                scrollToCurrentWeek();
+            }, 100);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [daysList.length, initialScrollIndex, scrollToCurrentWeek]);
+
+    return {
+        daysList,
+        weekDaysListRef,
+        hasScrolledToWeek,
+        dayItemWidth,
+        weekWidth,
+        initialScrollIndex,
+        scrollToCurrentWeek,
+        handleScroll,
+        handleScrollEnd,
+        isDayComplete,
+        onDateSelect,
+        selectedDate,
+    };
+}

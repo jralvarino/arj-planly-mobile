@@ -79,7 +79,19 @@ export function useHabitsViewModel() {
         async (habit: Habit) => {
             swipeableRefs.current[habit.id]?.close();
             try {
-                await updateHabit(habit.id, { active: !habit.active });
+                const newActiveStatus = !habit.active;
+                const updateData: Partial<Habit> = { active: newActiveStatus };
+                
+                // Se está sendo desativado, define end_date como hoje
+                if (!newActiveStatus) {
+                    const today = new Date().toISOString().split("T")[0];
+                    updateData.end_date = today;
+                } else {
+                    // Se está sendo reativado, remove o end_date
+                    updateData.end_date = undefined;
+                }
+                
+                await updateHabit(habit.id, updateData);
                 await fetchHabits();
             } catch (error) {
                 console.error("Error updating habit:", error);

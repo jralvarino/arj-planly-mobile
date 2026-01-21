@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -14,8 +14,12 @@ import {
     View,
 } from "react-native";
 import { TodoCard } from "../../components/TodoCard";
+import { WeekCarousel } from "../../components/WeekCarousel";
+import { WeekSummary } from "../../interfaces/todo/summary.interface";
 import { TODO_STATUS } from "../../models/Todo";
+import { getTodoSummary } from "../../service/todo.service";
 import { colors } from "../../theme/colors";
+import { headerTitleComponent } from "../../utils/dateUtils";
 import { useTodoViewModel } from "../../viewmodels/todo/useTodoViewModel";
 
 // Habilita LayoutAnimation no Android
@@ -23,7 +27,23 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+const getTodayDate = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export default function HomeScreen() {
+    const navigation = useNavigation();
     const {
         todos,
         categories,
@@ -33,6 +53,7 @@ export default function HomeScreen() {
         updating,
         handleRefresh,
         handleFocus,
+        fetchTodosByDate,
         handleToggleTodo,
         handleSkipTodoWithConfirmation,
         handleSaveTodo,
@@ -40,43 +61,123 @@ export default function HomeScreen() {
     } = useTodoViewModel();
     const prevTodosRef = useRef<typeof todos>([]);
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
+    const [weekSummary, setWeekSummary] = useState<WeekSummary>([]);
+    const [loadingSummary, setLoadingSummary] = useState(false);
+    const currentWeekRangeRef = useRef<{ startDate: string; endDate: string } | null>(null);
 
-    // Anima quando os todos mudam de posição
+    // Busca o summary da semana
+    const fetchWeekSummary = useCallback(async (startDate: string, endDate: string) => {
+        try {
+            setLoadingSummary(true);
+            const summary = await getTodoSummary(startDate, endDate);
+            setWeekSummary(summary);
+            currentWeekRangeRef.current = { startDate, endDate };
+        } catch (err) {
+            console.error("Error fetching week summary:", err);
+            setWeekSummary([]);
+        } finally {
+            setLoadingSummary(false);
+        }
+    }, []);
+
+    // Anima quando os todos mudam de posição ou status e recarrega o summary
     useEffect(() => {
-        if (prevTodosRef.current.length > 0 && todos.length === prevTodosRef.current.length) {
-            // Verifica se algum todo mudou de posição
+        if (prevTodosRef.current.length > 0) {
+            // Verifica se algum todo mudou de status (para animar quando completa)
+            const hasStatusChange = todos.some((todo) => {
+                const prevTodo = prevTodosRef.current.find((t) => t.id === todo.id);
+                return prevTodo && prevTodo.status !== todo.status;
+            });
+
+            // Verifica se algum todo mudou de posição na lista
             const hasPositionChange = todos.some((todo, index) => {
                 const prevTodo = prevTodosRef.current[index];
                 return !prevTodo || prevTodo.id !== todo.id;
             });
 
-            if (hasPositionChange) {
+            if (hasStatusChange || hasPositionChange) {
                 LayoutAnimation.configureNext({
-                    duration: 300,
+                    duration: 400,
                     create: {
                         type: LayoutAnimation.Types.easeInEaseOut,
                         property: LayoutAnimation.Properties.opacity,
+                        springDamping: 0.7,
                     },
                     update: {
-                        type: LayoutAnimation.Types.easeInEaseOut,
+                        type: LayoutAnimation.Types.spring,
                         springDamping: 0.7,
+                        property: LayoutAnimation.Properties.scaleXY,
+                        initialVelocity: 0.3,
                     },
                     delete: {
                         type: LayoutAnimation.Types.easeInEaseOut,
                         property: LayoutAnimation.Properties.opacity,
+                        duration: 200,
                     },
                 });
+
+                // Recarrega o summary quando o status de algum todo muda
+                if (hasStatusChange && currentWeekRangeRef.current) {
+                    fetchWeekSummary(
+                        currentWeekRangeRef.current.startDate,
+                        currentWeekRangeRef.current.endDate
+                    );
+                }
             }
         }
         prevTodosRef.current = todos;
-    }, [todos]);
+    }, [todos, fetchWeekSummary]);
 
     // Atualiza a lista quando a tab recebe foco
     useFocusEffect(
         useCallback(() => {
+            // Busca categorias quando a tela recebe foco
             handleFocus();
         }, [handleFocus])
     );
+
+    // Atualiza o título do header quando a data selecionada muda
+    useEffect(() => {
+        // Força o cálculo do título baseado na data selecionada atual
+        const title = headerTitleComponent(selectedDate);
+        navigation.setOptions({
+            headerTitle: title,
+        });
+    }, [selectedDate, navigation]);
+
+    // Busca todos quando a data selecionada muda ou na inicialização
+    useEffect(() => {
+        fetchTodosByDate(selectedDate);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedDate]);
+
+    // Callback quando a semana muda no carrossel
+    const handleWeekChange = useCallback(
+        (startDate: string, endDate: string) => {
+            if (
+                !currentWeekRangeRef.current ||
+                currentWeekRangeRef.current.startDate !== startDate ||
+                currentWeekRangeRef.current.endDate !== endDate
+            ) {
+                fetchWeekSummary(startDate, endDate);
+            }
+        },
+        [fetchWeekSummary]
+    );
+
+    // Busca o summary da semana inicial quando o componente carrega
+    useEffect(() => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const firstDayOfWeek = new Date(today);
+        firstDayOfWeek.setDate(today.getDate() - dayOfWeek);
+        const lastDayOfWeek = new Date(firstDayOfWeek);
+        lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+
+        fetchWeekSummary(formatDate(firstDayOfWeek), formatDate(lastDayOfWeek));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Filtra os todos baseado na categoria selecionada
     const filteredTodos = useMemo(() => {
@@ -117,9 +218,16 @@ export default function HomeScreen() {
                     <TodoCard
                         todo={item}
                         categories={categories}
-                        onToggle={handleToggleTodo}
-                        onSkip={handleSkipTodoWithConfirmation}
-                        onSave={handleSaveTodo}
+                        selectedDate={selectedDate}
+                        onToggle={(todoId, status, progressValue, notes, date) =>
+                            handleToggleTodo(todoId, status, progressValue, notes, date || selectedDate)
+                        }
+                        onSkip={(todoId, title, status, progressValue, notes, date) =>
+                            handleSkipTodoWithConfirmation(todoId, title, status, progressValue, notes, date || selectedDate)
+                        }
+                        onSave={(todoId, status, progressValue, notes, date) =>
+                            handleSaveTodo(todoId, status, progressValue, notes, date || selectedDate)
+                        }
                         onPlayCompletionSound={playCompletionSound}
                     />
                 </>
@@ -165,6 +273,14 @@ export default function HomeScreen() {
 
     return (
         <View style={styles.container}>
+            {/* Carrossel de Dias da Semana */}
+            <WeekCarousel
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                weekSummary={weekSummary}
+                onWeekChange={handleWeekChange}
+            />
+
             {/* Filtro de Categorias */}
             <View style={styles.filterContainer}>
                 <ScrollView
@@ -257,7 +373,7 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     listContent: {
-        padding: 16,
+        padding: 10,
     },
     emptyContainer: {
         flex: 1,
@@ -307,7 +423,8 @@ const styles = StyleSheet.create({
     separator: {
         flexDirection: "row",
         alignItems: "center",
-        marginVertical: 16,
+        marginTop: 4,   
+        marginVertical: 10,
         marginHorizontal: 16,
     },
     separatorLine: {
@@ -322,20 +439,18 @@ const styles = StyleSheet.create({
         color: colors.text.body,
     },
     filterContainer: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.gray[200],
+        paddingVertical: 5,
+        paddingHorizontal: 6,
         backgroundColor: colors.background,
     },
     filterScrollContent: {
-        paddingRight: 16,
+        paddingRight: 0,
     },
     filterButton: {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 11,
-        backgroundColor: colors.gray[200],
+        backgroundColor: colors.gray[100],
         marginRight: 8,
     },
     filterButtonActive: {
@@ -344,7 +459,7 @@ const styles = StyleSheet.create({
     filterButtonText: {
         fontSize: 12,
         fontWeight: "600",
-        color: colors.text.body,
+        color: "gray",
     },
     filterButtonTextActive: {
         color: "#fff",

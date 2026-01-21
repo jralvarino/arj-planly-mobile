@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
@@ -126,6 +126,18 @@ export function useHabitFormViewModel() {
         [router]
     );
 
+    // Define ou remove end_date automaticamente baseado no status active
+    useEffect(() => {
+        if (!active) {
+            // Se está sendo desativado, define end_date como hoje
+            const today = moment().format("YYYY-MM-DD");
+            setEndDate(today);
+        } else {
+            // Se está sendo reativado, remove o end_date
+            setEndDate("");
+        }
+    }, [active]);
+
     const handleSubmit = useCallback(async () => {
         // Validation
         if (!title.trim()) {
@@ -140,6 +152,10 @@ export function useHabitFormViewModel() {
 
         setLoading(true);
         try {
+            // Se está sendo desativado, garante que end_date está definido
+            // Se está sendo reativado, remove o end_date (undefined)
+            const finalEndDate = !active ? (endDate || moment().format("YYYY-MM-DD")) : undefined;
+            
             const habitData = {
                 title: title.trim(),
                 description: description.trim() || undefined,
@@ -154,7 +170,7 @@ export function useHabitFormViewModel() {
                 reminder_enabled: reminderEnabled,
                 reminder_time: reminderEnabled ? reminderTime : undefined,
                 start_date: startDate,
-                end_date: endDate || undefined,
+                end_date: finalEndDate,
                 active,
             };
 

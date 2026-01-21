@@ -9,7 +9,6 @@ export type TodoStatus = (typeof TODO_STATUS)[keyof typeof TODO_STATUS];
 export interface Todo {
     id: string;
     title: string;
-    description: string;
     color: string;
     emoji: string;
     unit: string;
@@ -21,5 +20,4 @@ export interface Todo {
     progressValue: string;
     skiped: boolean;
     notes?: string;
-    currentStreak: string;
 }
