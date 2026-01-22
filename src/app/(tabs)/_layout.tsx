@@ -1,111 +1,151 @@
 import { Ionicons } from "@expo/vector-icons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, Tabs } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { BurgerMenu } from "../../components/BurgerMenu";
 import { colors } from "../../theme/colors";
 
 export default function TabsLayout() {
+    const [burgerOpen, setBurgerOpen] = useState(false);
+
     return (
-        <Tabs
-            screenOptions={{
-                tabBarShowLabel: false,
-                tabBarStyle: styles.tabBar,
-            }}
-        >
-            <Tabs.Screen
-                name="index"
-                options={{
-                    headerShown: true,
-                    tabBarIcon: ({ focused, color }) => (
-                        <View>
-                            <Ionicons
-                                name={focused ? "checkmark-done" : "checkmark-done-outline"}
-                                size={24}
-                                color={focused ? colors.primary : "gray"}
-                            />
-                        </View>
-                    ),
-                }}
-            />
-
-            <Tabs.Screen
-                name="habits"
-                options={{
-                    headerTitle: "Habits",
-                    headerRight: () => (
-                        <Pressable onPress={() => router.push("/habits/new")} hitSlop={12} style={{ marginRight: 12 }}>
-                            <Ionicons name="add" size={24} color={colors.primary} />
+        <>
+            <Tabs
+                screenOptions={{
+                    tabBarShowLabel: true,
+                    tabBarStyle: styles.tabBar,
+                    tabBarActiveTintColor: colors.primary,
+                    tabBarInactiveTintColor: "gray",
+                    tabBarLabelStyle: {
+                        fontSize: 11,
+                        fontWeight: "600",
+                        marginTop: 2,
+                    },
+                    headerShadowVisible: false,
+                    headerLeft: () => (
+                        <Pressable onPress={() => setBurgerOpen(true)} hitSlop={12} style={styles.burgerButton}>
+                            <Ionicons name="menu" size={24} color={colors.text.title} />
                         </Pressable>
                     ),
-                    tabBarIcon: ({ focused, color }) => (
-                        <View>
-                            <Ionicons
-                                name={focused ? "list" : "list-outline"}
-                                size={24}
-                                color={focused ? colors.primary : "gray"}
-                            />
-                        </View>
-                    ),
                 }}
-            />
+            >
+                <Tabs.Screen
+                    name="index"
+                    options={{
+                        headerShown: true,
+                        tabBarLabel: "To-do",
+                        tabBarIcon: ({ focused, color }) => (
+                            <View>
+                                <Ionicons
+                                    name={focused ? "checkmark-done" : "checkmark-done-outline"}
+                                    size={24}
+                                    color={focused ? colors.primary : "gray"}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
 
-            <Tabs.Screen
-                name="statistics"
-                options={{
-                    headerTitle: "Statistics",
-                    tabBarIcon: ({ focused, color }) => (
-                        <View>
-                            <Ionicons
-                                name={focused ? "calendar" : "calendar-outline"}
-                                size={24}
-                                color={focused ? colors.primary : "gray"}
-                            />
-                        </View>
-                    ),
-                }}
-            />
+                <Tabs.Screen
+                    name="habits"
+                    options={{
+                        headerTitle: () => (
+                            <View style={styles.headerTitleContainer}>
+                                <Text style={styles.headerTitleText}>Habits</Text>
+                            </View>
+                        ),
+                        headerRight: () => (
+                            <Pressable onPress={() => router.push("/habits/new")} hitSlop={12} style={styles.addButton}>
+                                <Ionicons name="add" size={24} color={colors.primary} />
+                            </Pressable>
+                        ),
+                        tabBarLabel: "Habits",
+                        tabBarIcon: ({ focused, color }) => (
+                            <View>
+                                <Ionicons
+                                    name={focused ? "list" : "list-outline"}
+                                    size={24}
+                                    color={focused ? colors.primary : "gray"}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
 
-            <Tabs.Screen
-                name="categories"
-                options={{
-                    headerTitle: "Category",
-                    headerRight: () => (
-                        <Pressable
-                            onPress={() => router.push("/categories/new")}
-                            hitSlop={12}
-                            style={{ marginRight: 12 }}
-                        >
-                            <Ionicons name="add" size={24} color={colors.primary} />
-                        </Pressable>
-                    ),
-                    tabBarIcon: ({ focused, color }) => (
-                        <View>
-                            <MaterialIcons name="category" size={24} color={focused ? colors.primary : "gray"} />
-                        </View>
-                    ),
-                }}
-            />
+                <Tabs.Screen
+                    name="statistics"
+                    options={{
+                        headerTitle: "Statistics",
+                        tabBarLabel: "Statistics",
+                        tabBarIcon: ({ focused, color }) => (
+                            <View>
+                                <Ionicons
+                                    name={focused ? "calendar" : "calendar-outline"}
+                                    size={24}
+                                    color={focused ? colors.primary : "gray"}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
 
-            <Tabs.Screen
-                name="config"
-                options={{
-                    tabBarIcon: ({ focused, color }) => (
-                        <View>
-                            <Ionicons
-                                name={focused ? "settings" : "settings-outline"}
-                                size={24}
-                                color={focused ? colors.primary : "gray"}
-                            />
-                        </View>
-                    ),
-                }}
-            />
+                <Tabs.Screen
+                    name="categories"
+                    options={{
+                        headerTitle: () => (
+                            <View style={styles.headerTitleContainer}>
+                                <Text style={styles.headerTitleText}>Category</Text>
+                            </View>
+                        ),
+                        headerRight: () => (
+                            <Pressable
+                                onPress={() => router.push("/categories/new")}
+                                hitSlop={12}
+                                style={styles.addButton}
+                            >
+                                <Ionicons name="add" size={24} color={colors.primary} />
+                            </Pressable>
+                        ),
+                        tabBarLabel: "Categories",
+                        tabBarIcon: ({ focused, color }) => (
+                            <View>
+                                <MaterialIcons name="category" size={24} color={focused ? colors.primary : "gray"} />
+                            </View>
+                        ),
+                    }}
+                />
 
-        </Tabs>
+                <Tabs.Screen
+                    name="config"
+                    options={{
+                        tabBarLabel: "Settings",
+                        tabBarIcon: ({ focused, color }) => (
+                            <View>
+                                <Ionicons
+                                    name={focused ? "settings" : "settings-outline"}
+                                    size={24}
+                                    color={focused ? colors.primary : "gray"}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
+            </Tabs>
+            <BurgerMenu visible={burgerOpen} onClose={() => setBurgerOpen(false)} />
+        </>
     );
 }
 
 const styles = StyleSheet.create({
+    burgerButton: {
+        marginLeft: 16,
+        padding: 8,
+        backgroundColor: colors.gray[100],
+        borderRadius: 30,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     tabBar: {
         position: "absolute",
         bottom: 0,
@@ -117,15 +157,26 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
+        paddingTop: 8,
+        paddingBottom: 8,
     },
-
     addButton: {
-        height: 60,
-        width: 60,
+        marginRight: 12,
+        padding: 8,
+        backgroundColor: colors.gray[100],
+        borderRadius: 30,
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 99999,
-        backgroundColor: "#59008c",
-        marginBottom: 30,
+    },
+    headerTitleContainer: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: 30,
+        paddingVertical: 5,
+        borderRadius: 15,
+    },
+    headerTitleText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "white",
     },
 });

@@ -389,9 +389,9 @@ export function useTodoViewModel() {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
 
-            // Se o status for pending ou skipped, reseta progressValue para 0
-            const finalProgressValue =
-                status === TODO_STATUS.PENDING || status === TODO_STATUS.SKIPPED ? "0" : progressValue;
+            // Se o status for skipped, reseta progressValue para 0
+            // Para PENDING, mantém o progressValue (permite salvar progresso parcial)
+            const finalProgressValue = status === TODO_STATUS.SKIPPED ? "0" : progressValue;
 
             // Salva o estado anterior usando o ref (acesso síncrono ao estado atual)
             const previousTodo = todosRef.current.find((t) => t.id === todoId);

@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert } from "react-native";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
@@ -126,17 +126,20 @@ export function useHabitFormViewModel() {
         [router]
     );
 
-    // Define ou remove end_date automaticamente baseado no status active
-    useEffect(() => {
-        if (!active) {
-            // Se está sendo desativado, define end_date como hoje
-            const today = moment().format("YYYY-MM-DD");
-            setEndDate(today);
-        } else {
-            // Se está sendo reativado, remove o end_date
-            setEndDate("");
-        }
-    }, [active]);
+    // Ao marcar como inativo: define end_date como hoje apenas se o usuário não informou.
+    // Ao marcar como ativo: remove end_date.
+    const handleActiveChange = useCallback(
+        (value: boolean) => {
+            if (!value) {
+                setActive(false);
+                setEndDate((prev) => (prev ? prev : moment().format("YYYY-MM-DD")));
+            } else {
+                setActive(true);
+                setEndDate("");
+            }
+        },
+        []
+    );
 
     const handleSubmit = useCallback(async () => {
         // Validation
@@ -267,6 +270,7 @@ export function useHabitFormViewModel() {
         setStartDate,
         setEndDate,
         setActive,
+        handleActiveChange,
         handleSubmit,
     };
 }

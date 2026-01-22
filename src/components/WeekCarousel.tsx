@@ -28,7 +28,15 @@ interface DayItemProps {
     gapBetweenItems: number;
 }
 
-function DayItem({ item, isComplete, dayColor, isSelected, onDateSelect, dayItemWidth, gapBetweenItems }: DayItemProps) {
+function DayItem({
+    item,
+    isComplete,
+    dayColor,
+    isSelected,
+    onDateSelect,
+    dayItemWidth,
+    gapBetweenItems,
+}: DayItemProps) {
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const rotateAnim = useRef(new Animated.Value(0)).current;
     const prevIsCompleteRef = useRef(isComplete);
@@ -91,10 +99,7 @@ function DayItem({ item, isComplete, dayColor, isSelected, onDateSelect, dayItem
                 {isComplete ? (
                     <Animated.View
                         style={{
-                            transform: [
-                                { scale: scaleAnim },
-                                { rotate: rotate },
-                            ],
+                            transform: [{ scale: scaleAnim }, { rotate: rotate }],
                         }}
                     >
                         <MaterialIcons name="emoji-events" size={14} color="#FFD700" />
@@ -104,7 +109,7 @@ function DayItem({ item, isComplete, dayColor, isSelected, onDateSelect, dayItem
             <TouchableOpacity
                 style={[
                     styles.dayButton,
-                    { 
+                    {
                         width: dayItemWidth,
                         backgroundColor: dayColor,
                     },
@@ -113,23 +118,21 @@ function DayItem({ item, isComplete, dayColor, isSelected, onDateSelect, dayItem
                 ]}
                 onPress={() => onDateSelect(item.dateString)}
             >
-                <Text style={[styles.dayNameText, { color: textColor }]}>
-                    {item.dayName}
-                </Text>
-                <Text
-                    style={[styles.dayNumberText, { color: numberColor }]}
-                >
-                    {item.dayNumber}
-                </Text>
+                <Text style={[styles.dayNameText, { color: textColor }]}>{item.dayName}</Text>
+                <Text style={[styles.dayNumberText, { color: numberColor }]}>{item.dayNumber}</Text>
             </TouchableOpacity>
-            {item.isToday && (
-                <View style={styles.todayIndicator} />
-            )}
+            {item.isToday && <View style={styles.todayIndicator} />}
         </View>
     );
 }
 
-export function WeekCarousel({ selectedDate, onDateSelect, weekSummary, onWeekChange, selectedCategoryId }: WeekCarouselProps) {
+export function WeekCarousel({
+    selectedDate,
+    onDateSelect,
+    weekSummary,
+    onWeekChange,
+    selectedCategoryId,
+}: WeekCarouselProps) {
     const { width: screenWidth } = useWindowDimensions();
 
     const {

@@ -18,7 +18,7 @@ export function formatDate(date: Date): string {
 export function headerTitleComponent(date: string | null | undefined): string {
    // Se não há data, retorna padrão
    if (!date) {
-      return "Today's";
+      return "Today";
    }
 
    // Normaliza a data de entrada para "YYYY-MM-DD" usando timezone local
@@ -33,11 +33,11 @@ export function headerTitleComponent(date: string | null | undefined): string {
 
    // Compara as datas normalizadas (comparação exata de strings)
    if (normalizedDate === today) {
-      return "Today's";
+      return "Today";
    } else if (normalizedDate === yesterday) {
-      return "Yesterday's";
+      return "Yesterday";
    } else if (normalizedDate === tomorrow) {
-      return "Tomorrow's";
+      return "Tomorrow";
    } else {
       // Para datas mais distantes, formata como "January 15"
       return moment(normalizedDate).format('MMMM D');

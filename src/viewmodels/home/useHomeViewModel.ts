@@ -273,10 +273,6 @@ export function useHomeViewModel({ todos, selectedDate }: UseHomeViewModelProps)
                 weekSummaryCacheRef.current.set(cacheKey, newSummary);
             }
 
-            // Busca dados atualizados do servidor para garantir consistência
-            setTimeout(() => {
-                fetchWeekSummary(weekRange.startDate, weekRange.endDate, true);
-            }, 200); // Pequeno delay para garantir que o backend processou
         },
         [weekSummary, fetchWeekSummary]
     );

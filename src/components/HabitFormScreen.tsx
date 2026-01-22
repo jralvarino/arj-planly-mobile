@@ -442,6 +442,7 @@ export function HabitFormScreen() {
         setStartDate,
         setEndDate,
         setActive,
+        handleActiveChange,
         handleSubmit,
     } = useHabitFormViewModel();
 
@@ -877,7 +878,7 @@ export function HabitFormScreen() {
                                 <Text style={[styles.sectionTitle, styles.repeatTitle]}>Status</Text>
                                 <Switch
                                     value={active}
-                                    onValueChange={setActive}
+                                    onValueChange={handleActiveChange}
                                     trackColor={{ false: colors.gray[200], true: colors.primary }}
                                     thumbColor="white"
                                 />

@@ -58,7 +58,11 @@ export default function HomeScreen() {
         // Força o cálculo do título baseado na data selecionada atual
         const title = headerTitleComponent(selectedDate);
         navigation.setOptions({
-            headerTitle: title,
+            headerTitle: () => (
+                <View style={styles.headerTitleContainer}>
+                    <Text style={styles.headerTitleText}>{title}</Text>
+                </View>
+            ),
         });
     }, [selectedDate, navigation]);
 
@@ -310,5 +314,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: colors.text.body,
+    },
+    headerTitleContainer: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: 30,
+        paddingVertical: 5,
+        borderRadius: 15,
+    },
+    headerTitleText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "white",
     },
 });

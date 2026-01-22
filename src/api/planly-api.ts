@@ -4,8 +4,8 @@ import { tokenStorage } from "../service/tokenStorage";
 
 const getBaseURL = () => {
     return Platform.select({
-        android: "https://1trlwwn164.execute-api.us-east-1.amazonaws.com/prod",
-        ios: "http://localhost:3000",
+        ios: "https://1trlwwn164.execute-api.us-east-1.amazonaws.com/prod",
+        android: "http://localhost:3000",
     });
 };
 
