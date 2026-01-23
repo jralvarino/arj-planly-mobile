@@ -23,13 +23,23 @@ export const updateTodoStatus = async (
     habitId: string,
     date: string,
     status: TodoStatus,
-    progressValue: string,
-    notes: string
+    progressValue: string
 ): Promise<Todo> => {
     const { data } = await planlyApiClient.patch<Todo>(`/todo/${habitId}`, {
         date,
         status,
         progressValue,
+    });
+    return data;
+};
+
+export const updateTodoNotes = async (
+    habitId: string,
+    date: string,
+    notes: string
+): Promise<Todo> => {
+    const { data } = await planlyApiClient.patch<Todo>(`/todo/${habitId}/notes`, {
+        date,
         notes,
     });
     return data;

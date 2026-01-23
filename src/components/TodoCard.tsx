@@ -8,6 +8,7 @@ import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 import { getTodayDate } from "../utils/dateUtils";
+import { TodoModalContent } from "./TodoModalContent";
 
 interface TodoCardProps {
     todo: Todo;
@@ -23,6 +24,7 @@ interface TodoCardProps {
         date?: string
     ) => void;
     onSave?: (todoId: string, status: TodoStatus, progressValue: string, notes: string, date?: string) => void;
+    onSaveNotes?: (todoId: string, notes: string, date?: string) => void;
     onPlayCompletionSound?: () => void;
 }
 
@@ -33,16 +35,18 @@ export function TodoCard({
     onToggle,
     onSkip,
     onSave,
+    onSaveNotes,
     onPlayCompletionSound,
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    const notesModalRef = useRef<BottomSheetModal>(null);
     const { height: screenHeight } = useWindowDimensions();
     const snapPoints = useMemo(() => [screenHeight * 0.4], [screenHeight]);
+    const notesSnapPoints = useMemo(() => [screenHeight * 0.5], [screenHeight]);
     const [modalStatus, setModalStatus] = useState<TodoStatus>(todo.status);
     const [modalProgressValue, setModalProgressValue] = useState(todo.progressValue);
     const [modalNotes, setModalNotes] = useState(todo.notes || "");
-    const [showNotes, setShowNotes] = useState(false);
     const prevStatusRef = useRef<TodoStatus>(todo.status);
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(1)).current;
@@ -114,8 +118,6 @@ export function TodoCard({
         }
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
-        setModalNotes(todo.notes || "");
-        setShowNotes(!!todo.notes);
         bottomSheetModalRef.current?.present();
     };
 
@@ -124,47 +126,49 @@ export function TodoCard({
         // Reset to original values
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
-        setModalNotes(todo.notes || "");
-    }, [todo.status, todo.progressValue, todo.notes]);
+    }, [todo.status, todo.progressValue]);
 
-    const handleSave = () => {
+    const handleDecrementProgress = () => {
         if (isFutureDate) {
             Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
             return;
         }
-        onSave?.(todo.id, modalStatus, modalProgressValue, modalNotes, selectedDate);
-        bottomSheetModalRef.current?.dismiss();
-    };
-
-    const handleProgressChange = (value: string) => {
-        const numValue = parseFloat(value) || 0;
-        const maxValue = parseFloat(todo.targetValue) || 1;
-        const clampedValue = Math.min(Math.max(0, numValue), maxValue).toString();
-        setModalProgressValue(clampedValue);
-    };
-
-    const handleDecrementProgress = () => {
         const numValue = parseFloat(modalProgressValue) || 0;
         const newValue = Math.max(0, numValue - 1).toString();
-        setModalProgressValue(newValue);
+        let newStatus = modalStatus;
 
         // Se estava done mas não está mais no máximo, volta para pending e reseta progressValue
         if (modalStatus === TODO_STATUS.DONE && newValue !== todo.targetValue) {
-            setModalStatus(TODO_STATUS.PENDING);
-            setModalProgressValue("0");
+            newStatus = TODO_STATUS.PENDING;
+            const finalValue = "0";
+            setModalProgressValue(finalValue);
+            setModalStatus(newStatus);
+            onSave?.(todo.id, newStatus, finalValue, todo.notes || "", selectedDate);
+            return;
         }
+
+        setModalProgressValue(newValue);
+        onSave?.(todo.id, newStatus, newValue, todo.notes || "", selectedDate);
     };
 
     const handleIncrementProgress = () => {
+        if (isFutureDate) {
+            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            return;
+        }
         const numValue = parseFloat(modalProgressValue) || 0;
         const maxValue = parseFloat(todo.targetValue) || 1;
         const newValue = Math.min(maxValue, numValue + 1).toString();
-        setModalProgressValue(newValue);
+        let newStatus = modalStatus;
 
-        // Se atingir o valor máximo, define status como done e toca som
+        // Se atingir o valor máximo, define status como done
         if (newValue === todo.targetValue) {
-            setModalStatus(TODO_STATUS.DONE);
+            newStatus = TODO_STATUS.DONE;
         }
+
+        setModalProgressValue(newValue);
+        setModalStatus(newStatus);
+        onSave?.(todo.id, newStatus, newValue, todo.notes || "", selectedDate);
     };
 
     const handleSkip = () => {
@@ -177,10 +181,35 @@ export function TodoCard({
         swipeableRef.current?.close();
     };
 
+    const handleOpenNotesModal = () => {
+        if (isFutureDate) {
+            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            swipeableRef.current?.close();
+            return;
+        }
+        setModalNotes(todo.notes || "");
+        notesModalRef.current?.present();
+        swipeableRef.current?.close();
+    };
+
+    const handleCloseNotesModal = useCallback(() => {
+        notesModalRef.current?.dismiss();
+        setModalNotes(todo.notes || "");
+    }, [todo.notes]);
+
+    const handleSaveNotes = () => {
+        onSaveNotes?.(todo.id, modalNotes, selectedDate);
+        notesModalRef.current?.dismiss();
+    };
+
     const renderRightActions = () => {
         const isSkippedStatus = todo.status === TODO_STATUS.SKIPPED;
         return (
             <View style={styles.rightAction}>
+                <Pressable style={styles.notesButton} onPress={handleOpenNotesModal}>
+                    <Ionicons name="document-text-outline" size={24} color="#fff" />
+                    <Text style={styles.notesButtonText}>Notes</Text>
+                </Pressable>
                 <Pressable style={styles.skipButton} onPress={handleSkip}>
                     <Ionicons
                         name={isSkippedStatus ? "play-back-outline" : "play-forward-outline"}
@@ -315,133 +344,52 @@ export function TodoCard({
                 onDismiss={handleCloseModal}
             >
                 <BottomSheetView style={styles.modalContent}>
-                        {isSkipped && (
-                            <View style={styles.modalSkippedTag}>
-                                <Text style={styles.modalSkippedTagText}>skipped</Text>
-                            </View>
-                        )}
-                        {/* Header com Emoji e Título */}
-                        <View style={styles.modalHeaderContainer}>
-                            <View style={styles.modalHeader}>
-                                <View style={styles.modalEmojiContainer}>
-                                    {todo.emoji ? (
-                                        todo.emoji.length <= 2 ? (
-                                            <Text style={styles.modalEmoji}>{todo.emoji}</Text>
-                                        ) : (
-                                            <Emoji name={todo.emoji} style={styles.modalEmoji} />
-                                        )
-                                    ) : (
-                                        <Text style={styles.modalEmoji}>📷</Text>
-                                    )}
-                                </View>
-                                <Text style={styles.modalTitle}>{todo.title}</Text>
-                            </View>
-                        </View>
+                    <TodoModalContent
+                        todo={todo}
+                        modalStatus={modalStatus}
+                        modalProgressValue={modalProgressValue}
+                        setModalStatus={setModalStatus}
+                        setModalProgressValue={setModalProgressValue}
+                        isSkipped={isSkipped}
+                        isFutureDate={isFutureDate}
+                        onDecrement={handleDecrementProgress}
+                        onIncrement={handleIncrementProgress}
+                        modalProgress={modalProgress}
+                    />
+                </BottomSheetView>
+            </BottomSheetModal>
 
-                        {/* Conteúdo do Modal */}
-                        <View style={styles.modalBody}>
-                            {/* Progress Controls */}
-                            <View style={styles.modalProgressContainer}>
-                                <View style={styles.progressControls}>
-                                    <Pressable
-                                        style={[
-                                            styles.progressButton,
-                                            (isSkipped || isFutureDate) && styles.progressButtonDisabled,
-                                        ]}
-                                        onPress={handleDecrementProgress}
-                                        disabled={isSkipped || isFutureDate}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.progressButtonText,
-                                                (isSkipped || isFutureDate) && styles.progressButtonTextDisabled,
-                                            ]}
-                                        >
-                                            -
-                                        </Text>
-                                    </Pressable>
-                                    <View style={styles.progressValueContainer}>
-                                        <Text style={styles.progressValueText}>{modalProgressValue}</Text>
-                                    </View>
-                                    <Pressable
-                                        style={[
-                                            styles.progressButton,
-                                            (isSkipped || isFutureDate) && styles.progressButtonDisabled,
-                                        ]}
-                                        onPress={handleIncrementProgress}
-                                        disabled={isSkipped || isFutureDate}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.progressButtonText,
-                                                isSkipped && styles.progressButtonTextDisabled,
-                                            ]}
-                                        >
-                                            +
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                                <Text style={styles.modalProgressLabel}>
-                                    Progress: {modalProgressValue} / {todo.targetValue}
-                                    {todo.unit !== "count" ? ` ${todo.unit}` : ""}
-                                </Text>
-                                <View style={styles.modalProgressBarBackground}>
-                                    <View
-                                        style={[
-                                            styles.modalProgressBarFill,
-                                            { width: `${Math.min(modalProgress, 100)}%` },
-                                        ]}
-                                    />
-                                </View>
-                            </View>
-
-                            {/* Notes */}
-                            <View style={styles.modalNotesContainer}>
-                                <Pressable style={styles.notesToggleButton} onPress={() => setShowNotes(!showNotes)}>
-                                    <Ionicons
-                                        name={showNotes ? "chevron-up" : "chevron-down"}
-                                        size={20}
-                                        color={colors.text.body}
-                                    />
-                                    <Text style={styles.notesToggleText}>{showNotes ? "Hide Notes" : "Add Notes"}</Text>
-                                </Pressable>
-                                {showNotes && (
-                                    <TextInput
-                                        style={styles.modalNotesInput}
-                                        value={modalNotes}
-                                        onChangeText={setModalNotes}
-                                        multiline
-                                        numberOfLines={4}
-                                        placeholder="Add notes..."
-                                    />
-                                )}
-                            </View>
-
-                            {/* Action Buttons */}
-                            <View style={styles.modalActions}>
-                                <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={handleCloseModal}>
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </Pressable>
-                                <Pressable
-                                    style={[
-                                        styles.modalButton,
-                                        styles.saveButton,
-                                        (isSkipped || isFutureDate) && styles.saveButtonDisabled,
-                                    ]}
-                                    onPress={handleSave}
-                                    disabled={isSkipped || isFutureDate}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.saveButtonText,
-                                            (isSkipped || isFutureDate) && styles.saveButtonTextDisabled,
-                                        ]}
-                                    >
-                                        Save
-                                    </Text>
-                                </Pressable>
-                            </View>
-                        </View>
+            <BottomSheetModal
+                ref={notesModalRef}
+                snapPoints={notesSnapPoints}
+                enablePanDownToClose={true}
+                backgroundStyle={styles.bottomSheetBackground}
+                handleIndicatorStyle={styles.bottomSheetIndicator}
+                onDismiss={handleCloseNotesModal}
+            >
+                <BottomSheetView style={styles.modalContent}>
+                    <View style={styles.notesModalHeader}>
+                        <Text style={styles.notesModalTitle}>Notes</Text>
+                    </View>
+                    <View style={styles.notesModalBody}>
+                        <TextInput
+                            style={styles.notesInput}
+                            value={modalNotes}
+                            onChangeText={setModalNotes}
+                            placeholder="Add your notes here..."
+                            placeholderTextColor={colors.text.body}
+                            multiline
+                            textAlignVertical="top"
+                        />
+                    </View>
+                    <View style={styles.notesModalActions}>
+                        <Pressable style={styles.notesCancelButton} onPress={handleCloseNotesModal}>
+                            <Text style={styles.notesCancelButtonText}>Cancel</Text>
+                        </Pressable>
+                        <Pressable style={styles.notesSaveButton} onPress={handleSaveNotes}>
+                            <Text style={styles.notesSaveButtonText}>Save</Text>
+                        </Pressable>
+                    </View>
                 </BottomSheetView>
             </BottomSheetModal>
         </>
@@ -593,20 +541,40 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.text.title,
     },
-    rightAction: {
+    leftAction: {
         justifyContent: "center",
-        alignItems: "flex-end",
+        alignItems: "flex-start",
         marginBottom: 12,
         borderRadius: 12,
         overflow: "hidden",
         minHeight: 80,
+    },
+    notesButton: {
+        backgroundColor: colors.primary,
+        justifyContent: "center",
+        alignItems: "center",
+        width: 100,
+        paddingHorizontal: 16,
+    },
+    notesButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
+        marginTop: 4,
+    },
+    rightAction: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "stretch",
+        marginBottom: 12,
+        borderRadius: 12,
+        overflow: "hidden",
     },
     skipButton: {
         backgroundColor: "#FBBF24",
         justifyContent: "center",
         alignItems: "center",
         width: 100,
-        flex: 1,
         paddingHorizontal: 16,
     },
     skipButtonText: {
@@ -649,164 +617,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 4,
     },
-    modalHeaderContainer: {
-        padding: 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.gray[200],
-    },
-    modalHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    modalEmojiContainer: {
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalEmoji: {
-        fontSize: 32,
-    },
-    modalTitle: {
-        flex: 1,
-        fontSize: 18,
-        fontWeight: "700",
-        color: colors.text.title,
-    },
-    modalBody: {
-        padding: 16,
-        paddingTop: 12,
-    },
-    modalProgressContainer: {
-        marginBottom: 10,
-    },
-    modalProgressLabel: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.title,
-        marginTop: 12,
-        textAlign: "center",
-    },
-    modalProgressBarBackground: {
-        height: 10,
-        backgroundColor: colors.gray[200],
-        borderRadius: 5,
-        overflow: "hidden",
-        marginTop: 16,
-    },
-    modalProgressBarFill: {
-        height: "100%",
-        backgroundColor: "#10B981",
-        borderRadius: 6,
-    },
-    progressControls: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 20,
-    },
-    progressButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: colors.primary,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    progressButtonText: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#fff",
-    },
-    progressValueContainer: {
-        minWidth: 80,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    progressValueText: {
-        fontSize: 30,
-        fontWeight: "700",
-        color: colors.text.title,
-    },
-    modalNotesContainer: {
-        marginBottom: 10,
-    },
-    notesToggleButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        paddingVertical: 6,
-    },
-    notesToggleText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.body,
-    },
-    modalNotesLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: colors.text.title,
-        marginBottom: 8,
-    },
-    modalNotesInput: {
-        borderWidth: 1,
-        borderColor: colors.gray[300],
-        borderRadius: 8,
-        padding: 8,
-        fontSize: 12,
-        color: colors.text.title,
-        backgroundColor: colors.gray[100],
-        minHeight: 50,
-        textAlignVertical: "top",
-    },
-    modalActions: {
-        flexDirection: "row",
-        gap: 12,
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 8,
-        borderRadius: 8,
-        alignItems: "center",
-    },
-    cancelButton: {
-        backgroundColor: colors.gray[200],
-    },
-    cancelButtonText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: colors.text.body,
-    },
-    saveButton: {
-        backgroundColor: colors.primary,
-    },
-    saveButtonText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#fff",
-    },
-    saveButtonDisabled: {
-        backgroundColor: colors.gray[300],
-        opacity: 0.5,
-    },
-    saveButtonTextDisabled: {
-        color: colors.gray[200],
-    },
-    modalSkippedTag: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        backgroundColor: "#FBBF24",
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        zIndex: 10,
-    },
-    modalSkippedTagText: {
-        color: "black",
-        fontSize: 11,
-        fontWeight: "600",
-    },
     modalStreakTag: {
         position: "absolute",
         top: 10,
@@ -825,11 +635,61 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
-    progressButtonDisabled: {
-        backgroundColor: colors.gray[300],
-        opacity: 0.5,
+    notesModalHeader: {
+        padding: 10,
+        paddingLeft: 12,
+        paddingBottom: 9,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.gray[200],
     },
-    progressButtonTextDisabled: {
-        color: colors.gray[200],
+    notesModalTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: colors.text.title,
+    },
+    notesModalBody: {
+        flex: 1,
+        padding: 16,
+    },
+    notesInput: {
+        flex: 1,
+        fontSize: 16,
+        color: colors.text.title,
+        backgroundColor: colors.gray[100],
+        borderRadius: 8,
+        padding: 10,
+        minHeight: 200,
+        textAlignVertical: "top",
+    },
+    notesModalActions: {
+        flexDirection: "row",
+        padding: 16,
+        gap: 12,
+        borderTopWidth: 1,
+        borderTopColor: colors.gray[200],
+    },
+    notesCancelButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        backgroundColor: colors.gray[200],
+        alignItems: "center",
+    },
+    notesCancelButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: colors.text.title,
+    },
+    notesSaveButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+    },
+    notesSaveButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#fff",
     },
 });

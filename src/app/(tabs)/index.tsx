@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { TodoCard } from "../../components/TodoCard";
 import { WeekCarousel } from "../../components/WeekCarousel";
@@ -19,8 +20,11 @@ import { getTodayDate, headerTitleComponent } from "../../utils/dateUtils";
 import { useHomeViewModel } from "../../viewmodels/home/useHomeViewModel";
 import { useTodoViewModel } from "../../viewmodels/todo/useTodoViewModel";
 
+const TAB_BAR_HEIGHT = 72;
+
 export default function HomeScreen() {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const {
         todos,
         categories,
@@ -34,6 +38,7 @@ export default function HomeScreen() {
         handleToggleTodo,
         handleSkipTodoWithConfirmation,
         handleSaveTodo,
+        handleSaveNotes,
         playCompletionSound,
     } = useTodoViewModel();
     
@@ -95,22 +100,40 @@ export default function HomeScreen() {
         );
     }, [filteredTodos]);
 
+    // Verifica se todos os TODOS estão done (não skipped)
+    const allTodosDone = useMemo(() => {
+        if (filteredTodos.length === 0) return false;
+        return filteredTodos.every((todo) => todo.status === TODO_STATUS.DONE);
+    }, [filteredTodos]);
+
     const renderItem = useCallback(
         ({ item, index }: { item: (typeof filteredTodos)[0]; index: number }) => {
             // Verifica se este é o primeiro Todo com status "done"
             const isFirstDone =
+                !allTodosDone &&
                 !allTodosDoneOrSkipped &&
                 item.status === TODO_STATUS.DONE &&
                 (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.DONE);
 
             // Verifica se este é o primeiro Todo com status "skipped"
             const isFirstSkipped =
+                !allTodosDone &&
                 !allTodosDoneOrSkipped &&
                 item.status === TODO_STATUS.SKIPPED &&
                 (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.SKIPPED);
 
+            // Mostra o separador "Congratulations, all done" apenas no primeiro item quando todos estão done
+            const showCongratulations = allTodosDone && index === 0;
+
             return (
                 <>
+                    {showCongratulations && (
+                        <View style={styles.congratulationsSeparator}>
+                            <View style={styles.separatorLine} />
+                            <Text style={styles.congratulationsText}>All Done 🎉</Text>
+                            <View style={styles.separatorLine} />
+                        </View>
+                    )}
                     {isFirstDone && (
                         <View style={styles.separator}>
                             <View style={styles.separatorLine} />
@@ -145,6 +168,9 @@ export default function HomeScreen() {
                         onSave={(todoId, status, progressValue, notes, date) =>
                             handleSaveTodo(todoId, status, progressValue, notes, date || selectedDate)
                         }
+                        onSaveNotes={(todoId, notes, date) =>
+                            handleSaveNotes(todoId, notes, date || selectedDate)
+                        }
                         onPlayCompletionSound={playCompletionSound}
                     />
                 </>
@@ -158,6 +184,7 @@ export default function HomeScreen() {
             categories,
             filteredTodos,
             allTodosDoneOrSkipped,
+            allTodosDone,
         ]
     );
 
@@ -211,7 +238,10 @@ export default function HomeScreen() {
                 data={filteredTodos}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[
+                    styles.listContent,
+                    { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16 },
+                ]}
                 ListEmptyComponent={renderEmpty}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
@@ -338,6 +368,19 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: colors.text.body,
+    },
+    congratulationsSeparator: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 4,
+        marginVertical: 16,
+        marginHorizontal: 16,
+    },
+    congratulationsText: {
+        marginHorizontal: 12,
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#10B981",
     },
     headerTitleContainer: {
         backgroundColor: colors.primary,

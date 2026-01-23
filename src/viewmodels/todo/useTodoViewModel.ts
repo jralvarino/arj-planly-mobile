@@ -5,7 +5,7 @@ import { Alert } from "react-native";
 import { Category } from "../../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../../models/Todo";
 import { getAllCategories } from "../../service/category.service";
-import { getTodosByDate, updateTodoStatus } from "../../service/todo.service";
+import { getTodosByDate, updateTodoStatus, updateTodoNotes } from "../../service/todo.service";
 
 const getTodayDate = (): string => {
     // Usa o timezone local em vez de UTC para evitar problemas de timezone
@@ -203,7 +203,7 @@ export function useTodoViewModel() {
             }
 
             // Chama o backend em background (não bloqueia a UI)
-            updateTodoStatus(todoId, targetDate, newStatus, progressValue, notes)
+            updateTodoStatus(todoId, targetDate, newStatus, progressValue)
                 .then(() => {
                     // Sincroniza com o backend para garantir consistência usando a data selecionada
                     getTodosByDate(targetDate)
@@ -251,7 +251,7 @@ export function useTodoViewModel() {
             });
 
             // Chama o backend em background (não bloqueia a UI)
-            updateTodoStatus(todoId, targetDate, TODO_STATUS.SKIPPED, "0", notes)
+            updateTodoStatus(todoId, targetDate, TODO_STATUS.SKIPPED, "0")
                 .then(() => {
                     // Sincroniza com o backend para garantir consistência usando a data selecionada
                     getTodosByDate(targetDate)
@@ -303,7 +303,7 @@ export function useTodoViewModel() {
             });
 
             // Chama o backend em background (não bloqueia a UI)
-            updateTodoStatus(todoId, targetDate, TODO_STATUS.PENDING, "0", notes)
+            updateTodoStatus(todoId, targetDate, TODO_STATUS.PENDING, "0")
                 .then(() => {
                     // Sincroniza com o backend para garantir consistência usando a data selecionada
                     getTodosByDate(targetDate)
@@ -435,7 +435,7 @@ export function useTodoViewModel() {
             }
 
             // Chama o backend em background (não bloqueia a UI)
-            updateTodoStatus(todoId, targetDate, status, finalProgressValue, notes)
+            updateTodoStatus(todoId, targetDate, status, finalProgressValue)
                 .then(() => {
                     // Sincroniza com o backend para garantir consistência usando a data selecionada
                     getTodosByDate(targetDate)
@@ -473,6 +473,57 @@ export function useTodoViewModel() {
         [sortTodos, playCompletionSound]
     );
 
+    const handleSaveNotes = useCallback(
+        async (todoId: string, notes: string, date?: string) => {
+            // Usa a data selecionada ou a data de hoje como padrão
+            const targetDate = date || getTodayDate();
+
+            // Salva o estado anterior usando o ref
+            const previousTodo = todosRef.current.find((t) => t.id === todoId);
+            const previousNotes = previousTodo?.notes || "";
+
+            // Atualiza o estado local imediatamente (otimistic update)
+            setTodos((prevTodos) => {
+                const updatedTodos = prevTodos.map((todo) =>
+                    todo.id === todoId ? { ...todo, notes } : todo
+                );
+                const sortedData = sortTodos(updatedTodos);
+                todosRef.current = sortedData;
+                return sortedData;
+            });
+
+            // Chama o backend em background (não bloqueia a UI)
+            updateTodoNotes(todoId, targetDate, notes)
+                .then(() => {
+                    // Sincroniza com o backend para garantir consistência usando a data selecionada
+                    getTodosByDate(targetDate)
+                        .then((data) => {
+                            const sortedData = sortTodos(data);
+                            setTodos(sortedData);
+                            todosRef.current = sortedData;
+                        })
+                        .catch((err) => {
+                            console.error("Error syncing todos after save notes:", err);
+                        });
+                })
+                .catch((err) => {
+                    console.error("Error saving notes:", err);
+                    // Reverte a mudança otimista em caso de erro
+                    setTodos((prevTodos) => {
+                        const revertedTodos = prevTodos.map((todo) =>
+                            todo.id === todoId ? { ...todo, notes: previousNotes } : todo
+                        );
+                        const sortedData = sortTodos(revertedTodos);
+                        todosRef.current = sortedData;
+                        return sortedData;
+                    });
+                    const errorMessage = err instanceof Error ? err.message : "Failed to save notes. Please try again.";
+                    Alert.alert("Error", errorMessage);
+                });
+        },
+        [sortTodos]
+    );
+
     useEffect(() => {
         const today = getTodayDate();
         fetchTodos(today);
@@ -492,6 +543,7 @@ export function useTodoViewModel() {
         handleToggleTodo,
         handleSkipTodoWithConfirmation,
         handleSaveTodo,
+        handleSaveNotes,
         playCompletionSound,
     };
 }
