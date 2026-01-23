@@ -12,11 +12,20 @@ export interface Colors {
         200: string;
         300: string;
     };
+    orange: {
+        light: string;
+        base: string;
+        dark: string;
+        border: string;
+    };
+    gold: string;
+    white: string;
+    error: string;
 }
 
 export const colors: Colors = {
-    primary: "#59008c",
-    primaryLight: "#7a29b8",
+    primary: "#6D62E1",
+    primaryLight: "#A6A0F7",
 
     background: "#FFFFFF",
     tabBar: "#FFFFFF",
@@ -31,4 +40,13 @@ export const colors: Colors = {
         200: "#e1e1e1",
         300: "#c4c4c4",
     },
+    orange: {
+        light: "#FFF2E5",
+        base: "#FF9500",
+        dark: "#FFD6AF",
+        border: "#E67E00",
+    },
+    gold: "#FFD700",
+    white: "#FFFFFF",
+    error: "#EF4444",
 };

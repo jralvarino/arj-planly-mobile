@@ -84,9 +84,10 @@ function DayItem({
     }, [isComplete, scaleAnim, rotateAnim]);
 
     // Determina se o texto deve ser branco ou escuro baseado na cor de fundo
-    const isColoredBackground = dayColor !== colors.gray[100];
-    const textColor = isColoredBackground ? "#fff" : colors.text.body;
-    const numberColor = isColoredBackground ? "#fff" : colors.text.title;
+    const isLightBackground = dayColor === colors.orange.light || dayColor === colors.gray[100];
+    const isColoredBackground = dayColor !== colors.gray[100] && dayColor !== colors.orange.light;
+    const textColor = isLightBackground ? colors.text.body : colors.white;
+    const numberColor = isLightBackground ? colors.text.title : colors.white;
 
     const rotate = rotateAnim.interpolate({
         inputRange: [0, 1],
@@ -102,7 +103,7 @@ function DayItem({
                             transform: [{ scale: scaleAnim }, { rotate: rotate }],
                         }}
                     >
-                        <MaterialIcons name="emoji-events" size={14} color="#FFD700" />
+                        <MaterialIcons name="emoji-events" size={14} color={colors.gold} />
                     </Animated.View>
                 ) : null}
             </View>
@@ -255,13 +256,13 @@ const styles = StyleSheet.create({
     },
     dayButtonToday: {
         borderWidth: 0,
-        borderColor: colors.primary,
+        borderColor: colors.orange.base,
     },
     dayButtonSelected: {
         borderWidth: 2,
-        borderColor: colors.primary,
+        borderColor: colors.orange.border,
         // Adiciona uma sombra para destacar ainda mais quando selecionado
-        shadowColor: colors.primary,
+        shadowColor: colors.orange.border,
         shadowOffset: {
             width: 0,
             height: 2,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     dayNumberTextActive: {
-        color: "#fff",
+        color: colors.white,
     },
     todayIndicator: {
         width: 4,

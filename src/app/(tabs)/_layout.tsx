@@ -20,7 +20,7 @@ export default function TabsLayout() {
                     tabBarLabelStyle: {
                         fontSize: 11,
                         fontWeight: "600",
-                        marginTop: 2,
+                        marginTop: 5,
                     },
                     headerShadowVisible: false,
                     headerLeft: () => (
@@ -39,7 +39,7 @@ export default function TabsLayout() {
                             <View>
                                 <Ionicons
                                     name={focused ? "checkmark-done" : "checkmark-done-outline"}
-                                    size={24}
+                                    size={30}
                                     color={focused ? colors.primary : "gray"}
                                 />
                             </View>
@@ -65,7 +65,7 @@ export default function TabsLayout() {
                             <View>
                                 <Ionicons
                                     name={focused ? "list" : "list-outline"}
-                                    size={24}
+                                    size={30}
                                     color={focused ? colors.primary : "gray"}
                                 />
                             </View>
@@ -82,7 +82,7 @@ export default function TabsLayout() {
                             <View>
                                 <Ionicons
                                     name={focused ? "calendar" : "calendar-outline"}
-                                    size={24}
+                                    size={30}
                                     color={focused ? colors.primary : "gray"}
                                 />
                             </View>
@@ -110,7 +110,7 @@ export default function TabsLayout() {
                         tabBarLabel: "Categories",
                         tabBarIcon: ({ focused, color }) => (
                             <View>
-                                <MaterialIcons name="category" size={24} color={focused ? colors.primary : "gray"} />
+                                <MaterialIcons name="category" size={30} color={focused ? colors.primary : "gray"} />
                             </View>
                         ),
                     }}
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: 8,
+        paddingTop: 3,
         paddingBottom: 8,
     },
     addButton: {

@@ -4,6 +4,35 @@ import { WeekSummary } from "../../interfaces/todo/summary.interface";
 import { getCalendarColorByHabits } from "../../utils/colorUtils";
 import { colors } from "../../theme/colors";
 
+// Funções auxiliares para conversão de cores
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    hex = hex.replace(/^#/, '');
+    if (hex.length === 3) {
+        hex = hex
+            .split('')
+            .map((x: string) => x + x)
+            .join('');
+    }
+    const num = parseInt(hex, 16);
+    return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255,
+    };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+    return (
+        '#' +
+        [r, g, b]
+            .map((x: number) => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            })
+            .join('')
+    );
+}
+
 const INITIAL_DAYS_COUNT = 200; // 100 dias para trás e 100 para frente
 const CONTAINER_PADDING = 3 * 2; // paddingHorizontal de 3 em cada lado
 const WIDTH_REDUCTION = 5; // Valor a ser removido da largura de cada item
@@ -308,10 +337,30 @@ export function useWeekCarouselViewModel({
                 return colors.gray[100];
             }
             
-            // Usa a cor primária como base e calcula a cor baseado no progresso
-            const calculatedColor = getCalendarColorByHabits(colors.primary, completed, total);
+            // Se apenas o primeiro todo foi completado, retorna a cor inicial (mesma da tag)
+            if (completed === 1 && total > 0) {
+                return colors.orange.light;
+            }
             
-            return calculatedColor;
+            // Se todos os itens estão completos, retorna laranja
+            if (completed === total && total > 0) {
+                return colors.orange.base; // Laranja
+            }
+            
+            // Calcula gradiente entre a cor inicial e laranja
+            const startColor = colors.orange.light;
+            const endColor = colors.orange.base;
+            const progress = (completed - 1) / (total - 1); // Progresso entre 1 e total completos
+            
+            // Interpola entre as duas cores
+            const startRgb = hexToRgb(startColor);
+            const endRgb = hexToRgb(endColor);
+            
+            const r = Math.round(startRgb.r + (endRgb.r - startRgb.r) * progress);
+            const g = Math.round(startRgb.g + (endRgb.g - startRgb.g) * progress);
+            const b = Math.round(startRgb.b + (endRgb.b - startRgb.b) * progress);
+            
+            return rgbToHex(r, g, b);
         },
         [weekSummary, selectedCategoryId]
     );

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -61,6 +62,12 @@ export default function HomeScreen() {
             headerTitle: () => (
                 <View style={styles.headerTitleContainer}>
                     <Text style={styles.headerTitleText}>{title}</Text>
+                </View>
+            ),
+            headerRight: () => (
+                <View style={styles.streakTag}>
+                    <Ionicons name="flame" size={16} color={colors.orange.base} />
+                    <Text style={styles.streakText}>1 day</Text>
                 </View>
             ),
         });
@@ -225,6 +232,23 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    streakTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.orange.light,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginRight: 16,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: colors.orange.base,
+    },
+    streakText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.orange.base,
+    },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -265,7 +289,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         fontSize: 16,
-        color: "#EF4444",
+        color: colors.error,
         marginBottom: 12,
         textAlign: "center",
     },
