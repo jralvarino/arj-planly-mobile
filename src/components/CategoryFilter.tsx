@@ -67,8 +67,9 @@ export function CategoryFilter({ categories, selectedCategoryId, onCategorySelec
 
 const styles = StyleSheet.create({
     filterContainer: {
-        paddingVertical: 5,
+        paddingVertical: 3,
         paddingHorizontal: 6,
+        marginBottom: 9,
         backgroundColor: colors.background,
     },
     filterScrollContent: {

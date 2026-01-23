@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     card: {
         borderRadius: 12,
         padding: 9,
-        marginBottom: 12,
+        marginBottom: 11,
         borderLeftWidth: 4,
         position: "relative",
         ...Platform.select({

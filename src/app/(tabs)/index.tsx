@@ -303,6 +303,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 10,
+        paddingTop: 0,
     },
     listContentEmpty: {
         flexGrow: 1,
