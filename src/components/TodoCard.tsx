@@ -1,9 +1,10 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Animated, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 import { getTodayDate } from "../utils/dateUtils";
@@ -35,7 +36,9 @@ export function TodoCard({
     onPlayCompletionSound,
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
-    const [modalVisible, setModalVisible] = useState(false);
+    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    const { height: screenHeight } = useWindowDimensions();
+    const snapPoints = useMemo(() => [screenHeight * 0.4], [screenHeight]);
     const [modalStatus, setModalStatus] = useState<TodoStatus>(todo.status);
     const [modalProgressValue, setModalProgressValue] = useState(todo.progressValue);
     const [modalNotes, setModalNotes] = useState(todo.notes || "");
@@ -58,7 +61,7 @@ export function TodoCard({
 
     // Verifica se a data selecionada é futura (usa timezone local)
     const todayDate = getTodayDate();
-    const normalizedSelectedDate = selectedDate ? selectedDate.split('T')[0] : todayDate;
+    const normalizedSelectedDate = selectedDate ? selectedDate.split("T")[0] : todayDate;
     const isFutureDate = normalizedSelectedDate > todayDate;
 
     // Usa a cor original do todo
@@ -113,16 +116,16 @@ export function TodoCard({
         setModalProgressValue(todo.progressValue);
         setModalNotes(todo.notes || "");
         setShowNotes(!!todo.notes);
-        setModalVisible(true);
+        bottomSheetModalRef.current?.present();
     };
 
-    const handleCloseModal = () => {
-        setModalVisible(false);
+    const handleCloseModal = useCallback(() => {
+        bottomSheetModalRef.current?.dismiss();
         // Reset to original values
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
         setModalNotes(todo.notes || "");
-    };
+    }, [todo.status, todo.progressValue, todo.notes]);
 
     const handleSave = () => {
         if (isFutureDate) {
@@ -130,7 +133,7 @@ export function TodoCard({
             return;
         }
         onSave?.(todo.id, modalStatus, modalProgressValue, modalNotes, selectedDate);
-        setModalVisible(false);
+        bottomSheetModalRef.current?.dismiss();
     };
 
     const handleProgressChange = (value: string) => {
@@ -192,11 +195,7 @@ export function TodoCard({
 
     return (
         <>
-            <Swipeable
-                ref={swipeableRef}
-                renderRightActions={renderRightActions}
-                enabled={true}
-            >
+            <Swipeable ref={swipeableRef} renderRightActions={renderRightActions} enabled={true}>
                 <Pressable onPress={handleOpenModal}>
                     <Animated.View
                         style={[
@@ -263,7 +262,13 @@ export function TodoCard({
                                     if (isSkipped) {
                                         return;
                                     }
-                                    onToggle?.(todo.id, todo.status, todo.progressValue, todo.notes || "", selectedDate);
+                                    onToggle?.(
+                                        todo.id,
+                                        todo.status,
+                                        todo.progressValue,
+                                        todo.notes || "",
+                                        selectedDate
+                                    );
                                 }}
                                 style={[styles.checkButton, isDone && styles.checkButtonDone]}
                                 disabled={isSkipped}
@@ -301,9 +306,15 @@ export function TodoCard({
                 </Pressable>
             </Swipeable>
 
-            <Modal visible={modalVisible} transparent={true} animationType="slide" onRequestClose={handleCloseModal}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+            <BottomSheetModal
+                ref={bottomSheetModalRef}
+                snapPoints={snapPoints}
+                enablePanDownToClose={true}
+                backgroundStyle={styles.bottomSheetBackground}
+                handleIndicatorStyle={styles.bottomSheetIndicator}
+                onDismiss={handleCloseModal}
+            >
+                <BottomSheetView style={styles.modalContent}>
                         {isSkipped && (
                             <View style={styles.modalSkippedTag}>
                                 <Text style={styles.modalSkippedTagText}>skipped</Text>
@@ -431,9 +442,8 @@ export function TodoCard({
                                 </Pressable>
                             </View>
                         </View>
-                    </View>
-                </View>
-            </Modal>
+                </BottomSheetView>
+            </BottomSheetModal>
         </>
     );
 }
@@ -627,30 +637,17 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: "600",
     },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
     modalContent: {
-        backgroundColor: colors.background,
-        borderRadius: 16,
+        flex: 1,
         padding: 0,
-        width: "90%",
-        maxWidth: 400,
-        overflow: "hidden",
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
+    },
+    bottomSheetBackground: {
+        backgroundColor: colors.gray[100],
+    },
+    bottomSheetIndicator: {
+        backgroundColor: colors.gray[300],
+        width: 40,
+        height: 4,
     },
     modalHeaderContainer: {
         padding: 16,

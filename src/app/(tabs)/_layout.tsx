@@ -35,6 +35,7 @@ export default function TabsLayout() {
                     options={{
                         headerShown: true,
                         tabBarLabel: "To-do",
+                        tabBarShowLabel: false,
                         tabBarIcon: ({ focused, color }) => (
                             <View>
                                 <Ionicons
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: 3,
+        paddingTop: 5,
         paddingBottom: 8,
     },
     addButton: {

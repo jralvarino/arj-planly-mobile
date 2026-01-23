@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SplashScreen } from "../components/SplashScreen";
 import { useRootLayoutViewModel } from "../viewmodels/useRootLayoutViewModel";
 
@@ -17,7 +18,8 @@ export default function RootLayout() {
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <Stack>
+            <BottomSheetModalProvider>
+                <Stack>
                 {/* Login route: accessible only when NOT authenticated */}
                 <Stack.Protected guard={!isAuthenticated}>
                     <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -29,7 +31,8 @@ export default function RootLayout() {
                     <Stack.Screen name="categories" options={{ headerShown: false }} />
                     <Stack.Screen name="habits" options={{ headerShown: false }} />
                 </Stack.Protected>
-            </Stack>
+                </Stack>
+            </BottomSheetModalProvider>
         </GestureHandlerRootView>
     );
 }
