@@ -1,10 +1,11 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import Toast from "react-native-toast-message";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 import { getTodayDate } from "../utils/dateUtils";
@@ -37,10 +38,9 @@ export function TodoCard({
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-    const notesModalRef = useRef<BottomSheetModal>(null);
+    const [notesModalVisible, setNotesModalVisible] = useState(false);
     const { height: screenHeight } = useWindowDimensions();
     const snapPoints = useMemo(() => [screenHeight * 0.4], [screenHeight]);
-    const notesSnapPoints = useMemo(() => [screenHeight * 0.5], [screenHeight]);
     const [modalStatus, setModalStatus] = useState<TodoStatus>(todo.status);
     const [modalProgressValue, setModalProgressValue] = useState(todo.progressValue);
     const [modalNotes, setModalNotes] = useState(todo.notes || "");
@@ -110,7 +110,11 @@ export function TodoCard({
 
     const handleOpenModal = () => {
         if (isFutureDate) {
-            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
             return;
         }
         setModalStatus(todo.status);
@@ -127,7 +131,11 @@ export function TodoCard({
 
     const handleDecrementProgress = () => {
         if (isFutureDate) {
-            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
             return;
         }
         const numValue = parseFloat(modalProgressValue) || 0;
@@ -150,7 +158,11 @@ export function TodoCard({
 
     const handleIncrementProgress = () => {
         if (isFutureDate) {
-            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
             return;
         }
         const numValue = parseFloat(modalProgressValue) || 0;
@@ -170,7 +182,11 @@ export function TodoCard({
 
     const handleSkip = () => {
         if (isFutureDate) {
-            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
             swipeableRef.current?.close();
             return;
         }
@@ -180,23 +196,27 @@ export function TodoCard({
 
     const handleOpenNotesModal = () => {
         if (isFutureDate) {
-            Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
             swipeableRef.current?.close();
             return;
         }
         setModalNotes(todo.notes || "");
-        notesModalRef.current?.present();
+        setNotesModalVisible(true);
         swipeableRef.current?.close();
     };
 
     const handleCloseNotesModal = useCallback(() => {
-        notesModalRef.current?.dismiss();
+        setNotesModalVisible(false);
         setModalNotes(todo.notes || "");
     }, [todo.notes]);
 
     const handleSaveNotes = () => {
         onSaveNotes?.(todo.id, modalNotes, selectedDate);
-        notesModalRef.current?.dismiss();
+        setNotesModalVisible(false);
     };
 
     const renderRightActions = () => {
@@ -279,7 +299,11 @@ export function TodoCard({
                                     )}
                                     {todo.notes && todo.notes.trim() !== "" && (
                                         <View style={styles.notesIconContainer}>
-                                            <Ionicons name="chatbox-ellipses-outline" size={15} color={colors.primary} />
+                                            <Ionicons
+                                                name="chatbox-ellipses-outline"
+                                                size={15}
+                                                color={colors.primary}
+                                            />
                                         </View>
                                     )}
                                 </View>
@@ -287,18 +311,17 @@ export function TodoCard({
                             <Pressable
                                 onPress={() => {
                                     if (isFutureDate) {
-                                        Alert.alert("Data Futura", "Itens futuros não podem ser alterados.");
+                                        Toast.show({
+                                            type: "info",
+                                            text1: "Data Futura",
+                                            text2: "Itens futuros não podem ser alterados.",
+                                        });
                                         return;
                                     }
                                     if (isSkipped) {
                                         return;
                                     }
-                                    onToggle?.(
-                                        todo.id,
-                                        todo.status,
-                                        todo.progressValue,
-                                        selectedDate
-                                    );
+                                    onToggle?.(todo.id, todo.status, todo.progressValue, selectedDate);
                                 }}
                                 style={[styles.checkButton, isDone && styles.checkButtonDone]}
                                 disabled={isSkipped}
@@ -360,17 +383,21 @@ export function TodoCard({
                 </BottomSheetView>
             </BottomSheetModal>
 
-            <BottomSheetModal
-                ref={notesModalRef}
-                snapPoints={notesSnapPoints}
-                enablePanDownToClose={true}
-                backgroundStyle={styles.bottomSheetBackground}
-                handleIndicatorStyle={styles.bottomSheetIndicator}
-                onDismiss={handleCloseNotesModal}
+            <Modal
+                visible={notesModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={handleCloseNotesModal}
             >
-                <BottomSheetView style={styles.modalContent}>
+                <View style={styles.notesModalContainer}>
                     <View style={styles.notesModalHeader}>
+                        <Pressable onPress={handleCloseNotesModal} style={styles.notesModalCloseButton}>
+                            <Text style={styles.notesModalCloseText}>Cancel</Text>
+                        </Pressable>
                         <Text style={styles.notesModalTitle}>Notes</Text>
+                        <Pressable onPress={handleSaveNotes} style={styles.notesModalSaveButton}>
+                            <Text style={styles.notesModalSaveText}>Save</Text>
+                        </Pressable>
                     </View>
                     <View style={styles.notesModalBody}>
                         <TextInput
@@ -381,18 +408,11 @@ export function TodoCard({
                             placeholderTextColor={colors.text.body}
                             multiline
                             textAlignVertical="top"
+                            autoFocus
                         />
                     </View>
-                    <View style={styles.notesModalActions}>
-                        <Pressable style={styles.notesCancelButton} onPress={handleCloseNotesModal}>
-                            <Text style={styles.notesCancelButtonText}>Cancel</Text>
-                        </Pressable>
-                        <Pressable style={styles.notesSaveButton} onPress={handleSaveNotes}>
-                            <Text style={styles.notesSaveButtonText}>Save</Text>
-                        </Pressable>
-                    </View>
-                </BottomSheetView>
-            </BottomSheetModal>
+                </View>
+            </Modal>
         </>
     );
 }
@@ -570,17 +590,38 @@ const styles = StyleSheet.create({
         width: 40,
         height: 4,
     },
+    notesModalContainer: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
     notesModalHeader: {
-        padding: 10,
-        paddingLeft: 12,
-        paddingBottom: 9,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        paddingTop: Platform.OS === "ios" ? 60 : 16,
         borderBottomWidth: 1,
         borderBottomColor: colors.gray[200],
+    },
+    notesModalCloseButton: {
+        padding: 8,
+    },
+    notesModalCloseText: {
+        fontSize: 16,
+        color: colors.text.body,
     },
     notesModalTitle: {
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
+    },
+    notesModalSaveButton: {
+        padding: 8,
+    },
+    notesModalSaveText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: colors.primary,
     },
     notesModalBody: {
         flex: 1,
@@ -592,39 +633,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
         backgroundColor: colors.gray[100],
         borderRadius: 8,
-        padding: 10,
-        minHeight: 200,
+        padding: 12,
         textAlignVertical: "top",
-    },
-    notesModalActions: {
-        flexDirection: "row",
-        padding: 16,
-        gap: 12,
-        borderTopWidth: 1,
-        borderTopColor: colors.gray[200],
-    },
-    notesCancelButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: colors.gray[200],
-        alignItems: "center",
-    },
-    notesCancelButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: colors.text.title,
-    },
-    notesSaveButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: colors.primary,
-        alignItems: "center",
-    },
-    notesSaveButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#fff",
     },
 });

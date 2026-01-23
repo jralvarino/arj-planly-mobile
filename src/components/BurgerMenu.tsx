@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { User } from "../interfaces/user/User.interface";
 import { getUser } from "../service/user.service";
+import { useAuthStore } from "../stores/authStore";
 import { colors } from "../theme/colors";
 
 const DRAWER_WIDTH = Math.min(320, Dimensions.get("window").width * 0.85);
@@ -31,6 +32,12 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
     const [error, setError] = useState<string | null>(null);
     const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
+    const logout = useAuthStore((state) => state.logout);
+
+    const handleLogout = useCallback(async () => {
+        onClose();
+        await logout();
+    }, [logout, onClose]);
 
     const fetchUser = useCallback(async () => {
         setLoading(true);
@@ -142,6 +149,12 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
                             </View>
                         </View>
                     ) : null}
+                    <View style={styles.menuSection}>
+                        <Pressable style={styles.menuItem} onPress={handleLogout}>
+                            <Ionicons name="log-out-outline" size={24} color={colors.error} />
+                            <Text style={[styles.menuItemText, styles.logoutText]}>Logout</Text>
+                        </Pressable>
+                    </View>
                 </Animated.View>
             </View>
         </Modal>
@@ -235,5 +248,26 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 13,
         color: colors.text.body,
+    },
+    menuSection: {
+        marginTop: 32,
+        paddingTop: 24,
+        borderTopWidth: 1,
+        borderTopColor: colors.gray[200],
+    },
+    menuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    menuItemText: {
+        fontSize: 16,
+        fontWeight: "500",
+        color: colors.text.title,
+    },
+    logoutText: {
+        color: colors.error,
     },
 });

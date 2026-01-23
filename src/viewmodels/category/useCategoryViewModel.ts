@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 import { Category } from "../../models/Category";
 import { deleteCategory, getAllCategories } from "../../service/category.service";
 
@@ -10,6 +10,8 @@ export function useCategoryViewModel() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
     const fetchCategories = useCallback(async () => {
         setLoading(true);
@@ -31,7 +33,11 @@ export function useCategoryViewModel() {
             }
 
             setError(errorMessage);
-            Alert.alert("Error", errorMessage);
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: errorMessage,
+            });
         } finally {
             setLoading(false);
         }
@@ -45,38 +51,43 @@ export function useCategoryViewModel() {
     );
 
     const handleDelete = useCallback(
-        async (category: Category) => {
-            Alert.alert("Delete Category", `Are you sure you want to delete "${category.name}"?`, [
-                {
-                    text: "Cancel",
-                    style: "cancel",
-                },
-                {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await deleteCategory(category.id);
-                            // Refresh categories after deletion
-                            await fetchCategories();
-                        } catch (err: any) {
-                            console.error("Error deleting category:", err);
-                            let errorMessage = "Failed to delete category. Please try again.";
-
-                            if (err.response?.data?.message) {
-                                errorMessage = err.response.data.message;
-                            } else if (err.message) {
-                                errorMessage = err.message;
-                            }
-
-                            Alert.alert("Error", errorMessage);
-                        }
-                    },
-                },
-            ]);
+        (category: Category) => {
+            setCategoryToDelete(category);
+            setDeleteDialogVisible(true);
         },
-        [fetchCategories]
+        []
     );
+
+    const confirmDelete = useCallback(async () => {
+        if (!categoryToDelete) return;
+        
+        setDeleteDialogVisible(false);
+        try {
+            await deleteCategory(categoryToDelete.id);
+            await fetchCategories();
+            setCategoryToDelete(null);
+        } catch (err: any) {
+            console.error("Error deleting category:", err);
+            let errorMessage = "Failed to delete category. Please try again.";
+
+            if (err.response?.data?.message) {
+                errorMessage = err.response.data.message;
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: errorMessage,
+            });
+        }
+    }, [categoryToDelete, fetchCategories]);
+
+    const cancelDelete = useCallback(() => {
+        setDeleteDialogVisible(false);
+        setCategoryToDelete(null);
+    }, []);
 
     // Refresh categories whenever the screen comes into focus
     useFocusEffect(
@@ -90,10 +101,14 @@ export function useCategoryViewModel() {
         categories,
         loading,
         error,
+        deleteDialogVisible,
+        categoryToDelete,
 
         // Actions
         fetchCategories,
         handleEdit,
         handleDelete,
+        confirmDelete,
+        cancelDelete,
     };
 }

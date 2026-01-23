@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 import type { LoginHttpParams } from "../../interfaces/http/LoginHttpParams";
 import { login } from "../../service/auth.service";
 import { useAuthStore } from "../../stores/authStore";
@@ -17,12 +17,20 @@ export function useLoginViewModel() {
     const handleLogin = useCallback(async () => {
         // Validation
         if (!username.trim()) {
-            Alert.alert("Validation Error", "Please enter your username.");
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please enter your username.",
+            });
             return;
         }
 
         if (!password.trim()) {
-            Alert.alert("Validation Error", "Please enter your password.");
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please enter your password.",
+            });
             return;
         }
 
@@ -52,7 +60,11 @@ export function useLoginViewModel() {
                 errorMessage = error.message;
             }
 
-            Alert.alert("Login Error", errorMessage);
+            Toast.show({
+                type: "error",
+                text1: "Login Error",
+                text2: errorMessage,
+            });
         } finally {
             setLoading(false);
         }

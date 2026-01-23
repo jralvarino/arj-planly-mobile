@@ -2,7 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
 import { createHabit, getHabitById, updateHabit } from "../../service/habit.service";
@@ -117,7 +117,11 @@ export function useHabitFormViewModel() {
                     errorMessage = err.message;
                 }
 
-                Alert.alert("Error", errorMessage);
+                Toast.show({
+                    type: "error",
+                    text1: "Error",
+                    text2: errorMessage,
+                });
                 router.back();
             } finally {
                 setInitialLoading(false);
@@ -144,12 +148,20 @@ export function useHabitFormViewModel() {
     const handleSubmit = useCallback(async () => {
         // Validation
         if (!title.trim()) {
-            Alert.alert("Validation Error", "Please enter a habit title.");
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please enter a habit title.",
+            });
             return;
         }
 
         if (!categoryId) {
-            Alert.alert("Validation Error", "Please select a category.");
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select a category.",
+            });
             return;
         }
 
@@ -179,20 +191,20 @@ export function useHabitFormViewModel() {
 
             if (isEditMode && params.id) {
                 await updateHabit(params.id, habitData);
-                Alert.alert("Success", "Habit updated successfully.", [
-                    {
-                        text: "OK",
-                        onPress: () => router.back(),
-                    },
-                ]);
+                Toast.show({
+                    type: "success",
+                    text1: "Success",
+                    text2: "Habit updated successfully.",
+                });
+                setTimeout(() => router.back(), 1500);
             } else {
                 await createHabit(habitData);
-                Alert.alert("Success", "Habit created successfully.", [
-                    {
-                        text: "OK",
-                        onPress: () => router.back(),
-                    },
-                ]);
+                Toast.show({
+                    type: "success",
+                    text1: "Success",
+                    text2: "Habit created successfully.",
+                });
+                setTimeout(() => router.back(), 1500);
             }
         } catch (err: any) {
             console.error("Error saving habit:", err.response?.data);
@@ -206,7 +218,11 @@ export function useHabitFormViewModel() {
                 errorMessage = err.message;
             }
 
-            Alert.alert("Error", errorMessage);
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: errorMessage,
+            });
         } finally {
             setLoading(false);
         }

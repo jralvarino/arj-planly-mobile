@@ -21,6 +21,11 @@ export interface Colors {
     gold: string;
     white: string;
     error: string;
+    toast: {
+        success: string;
+        info: string;
+        error: string;
+    };
 }
 
 export const colors: Colors = {
@@ -49,4 +54,9 @@ export const colors: Colors = {
     gold: "#FFD700",
     white: "#FFFFFF",
     error: "#EF4444",
+    toast: {
+        success: "#10B981",
+        info: "#FBBF24",
+        error: "#EF4444",
+    },
 };

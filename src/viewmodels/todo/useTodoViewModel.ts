@@ -1,7 +1,7 @@
 import { Audio } from "expo-av";
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 import { Category } from "../../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../../models/Todo";
 import { getAllCategories } from "../../service/category.service";
@@ -228,7 +228,11 @@ export function useTodoViewModel() {
                     });
                     const errorMessage =
                         err instanceof Error ? err.message : "Failed to update todo status. Please try again.";
-                    Alert.alert("Error", errorMessage);
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: errorMessage,
+                    });
                 });
         },
         [sortTodos]
@@ -280,7 +284,11 @@ export function useTodoViewModel() {
                         return sortedData;
                     });
                     const errorMessage = err instanceof Error ? err.message : "Failed to skip todo. Please try again.";
-                    Alert.alert("Error", errorMessage);
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: errorMessage,
+                    });
                 });
         },
         [sortTodos]
@@ -329,7 +337,11 @@ export function useTodoViewModel() {
                         return sortedData;
                     });
                     const errorMessage = err instanceof Error ? err.message : "Failed to undo skip. Please try again.";
-                    Alert.alert("Error", errorMessage);
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: errorMessage,
+                    });
                 });
         },
         [sortTodos]
@@ -351,7 +363,11 @@ export function useTodoViewModel() {
 
             // Não permite skip se o status for done
             if (currentStatus === TODO_STATUS.DONE) {
-                Alert.alert("Cannot Skip", "A completed todo cannot be skipped.");
+                Toast.show({
+                    type: "info",
+                    text1: "Cannot Skip",
+                    text2: "A completed todo cannot be skipped.",
+                });
                 return;
             }
 
@@ -463,7 +479,11 @@ export function useTodoViewModel() {
                         return sortedData;
                     });
                     const errorMessage = err instanceof Error ? err.message : "Failed to save todo. Please try again.";
-                    Alert.alert("Error", errorMessage);
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: errorMessage,
+                    });
                 });
         },
         [sortTodos, playCompletionSound]
@@ -514,7 +534,11 @@ export function useTodoViewModel() {
                         return sortedData;
                     });
                     const errorMessage = err instanceof Error ? err.message : "Failed to save notes. Please try again.";
-                    Alert.alert("Error", errorMessage);
+                    Toast.show({
+                        type: "error",
+                        text1: "Error",
+                        text2: errorMessage,
+                    });
                 });
         },
         [sortTodos]

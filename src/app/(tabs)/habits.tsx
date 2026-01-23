@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Dialog, Button, Portal } from "react-native-paper";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
@@ -15,11 +16,15 @@ export default function HabitsListScreen() {
         loading,
         filter,
         swipeableRefs,
+        deleteDialogVisible,
+        habitToDelete,
         setFilter,
         handleHabitPress,
         handleEdit,
         handleDelete,
         handleDisable,
+        confirmDelete,
+        cancelDelete,
     } = useHabitsViewModel();
 
     const renderRightActions = (habit: Habit, progress: SharedValue<number>) => {
@@ -116,14 +121,34 @@ export default function HabitsListScreen() {
                         </TouchableOpacity>
                     </Swipeable>
                 )}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[
+                    styles.listContent,
+                    habits.length === 0 && styles.listContentEmpty,
+                ]}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
+                        <MaterialCommunityIcons name="clipboard-list-outline" size={64} color={colors.gray[300]} />
                         <Text style={styles.emptyText}>No habits found</Text>
                         <Text style={styles.emptySubtext}>Create your first habit to get started</Text>
                     </View>
                 }
             />
+            <Portal>
+                <Dialog visible={deleteDialogVisible} onDismiss={cancelDelete}>
+                    <Dialog.Title>Delete Habit</Dialog.Title>
+                    <Dialog.Content>
+                        <Text>
+                            Are you sure you want to delete? All the historical data will be lost."{habitToDelete?.title}"?
+                        </Text>
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={cancelDelete}>Cancel</Button>
+                        <Button onPress={confirmDelete} textColor={colors.error}>
+                            Delete
+                        </Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </View>
     );
 }
@@ -136,6 +161,9 @@ const styles = StyleSheet.create({
     listContent: {
         padding: 16,
         paddingBottom: 100,
+    },
+    listContentEmpty: {
+        flexGrow: 1,
     },
     loadingContainer: {
         flex: 1,
@@ -153,17 +181,20 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        paddingVertical: 60,
+        paddingHorizontal: 32,
+        minHeight: 400,
     },
     emptyText: {
         fontSize: 18,
         fontWeight: "600",
         color: colors.text.title,
+        marginTop: 16,
         marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 14,
         color: colors.text.body,
+        textAlign: "center",
     },
     filterContainer: {
         backgroundColor: "white",

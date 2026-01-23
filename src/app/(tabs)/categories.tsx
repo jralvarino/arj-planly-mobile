@@ -2,6 +2,7 @@ import { colors } from "@/theme/colors";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRef } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Dialog, Button, Portal } from "react-native-paper";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
@@ -9,7 +10,16 @@ import { Category } from "../../models/Category";
 import { useCategoryViewModel } from "../../viewmodels/category/useCategoryViewModel";
 
 export default function CategoriesScreen() {
-    const { categories, loading, handleEdit, handleDelete } = useCategoryViewModel();
+    const {
+        categories,
+        loading,
+        deleteDialogVisible,
+        categoryToDelete,
+        handleEdit,
+        handleDelete,
+        confirmDelete,
+        cancelDelete,
+    } = useCategoryViewModel();
     const swipeableRefs = useRef<{ [id: string]: SwipeableMethods | null }>({});
 
     const renderRightActions = (category: Category, progress: SharedValue<number>) => {
@@ -60,33 +70,57 @@ export default function CategoriesScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView style={styles.content}>
-                {categories.map((category) => (
-                    <Swipeable
-                        key={category.id}
-                        // @ts-expect-error - ReanimatedSwipeable ref accepts callback function
-                        ref={(ref: SwipeableMethods | null) => {
-                            swipeableRefs.current[category.id] = ref;
-                        }}
-                        renderRightActions={(progress) => renderRightActions(category, progress)}
-                        overshootRight={false}
-                    >
-                        <View style={styles.categoryCard}>
-                            <View style={styles.categoryInfo}>
-                                <View style={styles.categoryDetails}>
-                                    <Text style={styles.categoryName}>{category.name}</Text>
+            {categories.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                    <MaterialCommunityIcons name="folder-outline" size={64} color={colors.gray[300]} />
+                    <Text style={styles.emptyText}>No categories found</Text>
+                    <Text style={styles.emptySubtext}>Create your first category to get started</Text>
+                </View>
+            ) : (
+                <ScrollView style={styles.content}>
+                    {categories.map((category) => (
+                        <Swipeable
+                            key={category.id}
+                            // @ts-expect-error - ReanimatedSwipeable ref accepts callback function
+                            ref={(ref: SwipeableMethods | null) => {
+                                swipeableRefs.current[category.id] = ref;
+                            }}
+                            renderRightActions={(progress) => renderRightActions(category, progress)}
+                            overshootRight={false}
+                        >
+                            <View style={styles.categoryCard}>
+                                <View style={styles.categoryInfo}>
+                                    <View style={styles.categoryDetails}>
+                                        <Text style={styles.categoryName}>{category.name}</Text>
+                                    </View>
                                 </View>
+                                <MaterialCommunityIcons
+                                    name="chevron-right"
+                                    size={24}
+                                    color={colors.text.body}
+                                    style={styles.chevronIcon}
+                                />
                             </View>
-                            <MaterialCommunityIcons
-                                name="chevron-right"
-                                size={24}
-                                color={colors.text.body}
-                                style={styles.chevronIcon}
-                            />
-                        </View>
-                    </Swipeable>
-                ))}
-            </ScrollView>
+                        </Swipeable>
+                    ))}
+                </ScrollView>
+            )}
+            <Portal>
+                <Dialog visible={deleteDialogVisible} onDismiss={cancelDelete}>
+                    <Dialog.Title>Delete Category</Dialog.Title>
+                    <Dialog.Content>
+                        <Text>
+                            Are you sure you want to delete "{categoryToDelete?.name}"?
+                        </Text>
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={cancelDelete}>Cancel</Button>
+                        <Button onPress={confirmDelete} textColor={colors.error}>
+                            Delete
+                        </Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </View>
     );
 }
@@ -159,5 +193,27 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "600",
         marginTop: 4,
+    },
+    emptyContainer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 32,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: colors.text.title,
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: colors.text.body,
+        textAlign: "center",
     },
 });

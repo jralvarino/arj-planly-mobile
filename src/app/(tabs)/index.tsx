@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -206,7 +206,9 @@ export default function HomeScreen() {
 
         return (
             <View style={styles.emptyContainer}>
+                <MaterialCommunityIcons name="check-circle-outline" size={64} color={colors.gray[300]} />
                 <Text style={styles.emptyText}>No todos for today</Text>
+                <Text style={styles.emptySubtext}>Create your first todo to get started</Text>
             </View>
         );
     }, [loading, error, handleRefresh]);
@@ -236,6 +238,7 @@ export default function HomeScreen() {
                 contentContainerStyle={[
                     styles.listContent,
                     { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16 },
+                    filteredTodos.length === 0 && styles.listContentEmpty,
                 ]}
                 ListEmptyComponent={renderEmpty}
                 refreshControl={
@@ -301,16 +304,27 @@ const styles = StyleSheet.create({
     listContent: {
         padding: 10,
     },
+    listContentEmpty: {
+        flexGrow: 1,
+    },
     emptyContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        paddingVertical: 60,
+        paddingHorizontal: 32,
+        minHeight: 400,
     },
     emptyText: {
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: "600",
+        color: colors.text.title,
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        fontSize: 14,
         color: colors.text.body,
-        marginTop: 12,
+        textAlign: "center",
     },
     errorText: {
         fontSize: 16,
