@@ -200,8 +200,8 @@ export function useWeekCarouselViewModel({
                 total = d.total.total;
             }
             if (total === 0 || done === 0) return colors.gray[100];
-            if (done === 1) return colors.orange.light;
-            if (done === total) return colors.orange.base;
+            if (done === total && total > 0) return colors.orange.base; // todos completos (inclui 1/1)
+            if (done === 1) return colors.orange.light; // primeiro de vários
             const p = (done - 1) / (total - 1);
             const s = hexToRgb(colors.orange.light);
             const e = hexToRgb(colors.orange.base);
