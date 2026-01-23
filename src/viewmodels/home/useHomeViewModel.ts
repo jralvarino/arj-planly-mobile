@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LayoutAnimation, Platform, UIManager } from "react-native";
-import { WeekSummary } from "../../interfaces/todo/summary.interface";
+import { CategorySummary, DaySummary, WeekSummary } from "../../interfaces/todo/summary.interface";
 import { TODO_STATUS, Todo } from "../../models/Todo";
 import { getTodoSummary } from "../../service/todo.service";
 import { formatDate, getTodayDate } from "../../utils/dateUtils";
@@ -24,6 +24,34 @@ const getWeekRangeFromDate = (date: string): { startDate: string; endDate: strin
     return {
         startDate: formatDate(firstDayOfWeek),
         endDate: formatDate(lastDayOfWeek),
+    };
+};
+
+// Monta DaySummary a partir dos todos (total + categories) para atualização otimista
+const buildDaySummaryFromTodos = (date: string, todos: Todo[]): DaySummary => {
+    const doneCount = todos.filter((t) => t.status === TODO_STATUS.DONE).length;
+    const skippedCount = todos.filter((t) => t.status === TODO_STATUS.SKIPPED).length;
+    const pendingCount = todos.filter((t) => t.status === TODO_STATUS.PENDING).length;
+    const totalCount = todos.length;
+
+    const byCat = new Map<string, { done: number; skipped: number; pending: number; total: number }>();
+    for (const t of todos) {
+        const c = byCat.get(t.categoryId) || { done: 0, skipped: 0, pending: 0, total: 0 };
+        c.total++;
+        if (t.status === TODO_STATUS.DONE) c.done++;
+        else if (t.status === TODO_STATUS.SKIPPED) c.skipped++;
+        else c.pending++;
+        byCat.set(t.categoryId, c);
+    }
+    const categories: CategorySummary[] = Array.from(byCat.entries()).map(([categoryId, c]) => ({
+        categoryId,
+        ...c,
+    }));
+
+    return {
+        date,
+        total: { done: doneCount, skipped: skippedCount, pending: pendingCount, total: totalCount },
+        categories,
     };
 };
 
@@ -230,51 +258,45 @@ export function useHomeViewModel({ todos, selectedDate }: UseHomeViewModelProps)
         [fetchWeekSummary]
     );
 
-    // Atualiza o summary quando um todo muda de status
+    // Atualiza o summary quando um todo muda de status (inclui datas antigas e dias ausentes na API)
     const handleTodoStatusChange = useCallback(
         (changedDate: string, todos: Todo[]) => {
             const weekRange = getWeekRangeFromDate(changedDate);
             const cacheKey = `${weekRange.startDate}-${weekRange.endDate}`;
+            const newDaySummary = buildDaySummaryFromTodos(changedDate, todos);
+            const isViewingThisWeek =
+                currentWeekRangeRef.current?.startDate === weekRange.startDate &&
+                currentWeekRangeRef.current?.endDate === weekRange.endDate;
 
-            // Atualização otimista: atualiza o summary localmente baseado nos todos atuais
-            if (weekSummary.length > 0) {
-                const doneCount = todos.filter((t) => t.status === TODO_STATUS.DONE).length;
-                const totalCount = todos.length;
-                const skippedCount = todos.filter((t) => t.status === TODO_STATUS.SKIPPED).length;
-                const pendingCount = todos.filter((t) => t.status === TODO_STATUS.PENDING).length;
+            const applyToSummary = (summary: WeekSummary): WeekSummary => {
+                const idx = summary.findIndex((d) => d.date === changedDate);
+                if (idx >= 0) {
+                    return summary.map((d, i) =>
+                        i === idx
+                            ? { ...d, total: newDaySummary.total, categories: newDaySummary.categories }
+                            : d
+                    );
+                }
+                return [...summary, newDaySummary].sort((a, b) => a.date.localeCompare(b.date));
+            };
 
-                // Atualiza apenas o dia da data selecionada no summary
-                const updatedSummary = weekSummary.map((daySummary) => {
-                    if (daySummary.date === changedDate) {
-                        return {
-                            ...daySummary,
-                            total: {
-                                done: doneCount,
-                                skipped: skippedCount,
-                                pending: pendingCount,
-                                total: totalCount,
-                            },
-                        };
-                    }
-                    return daySummary;
-                });
-
-                // Cria uma nova referência para forçar re-render
-                const newSummary = updatedSummary.map((day) => ({
+            if (isViewingThisWeek) {
+                const base = weekSummary.length > 0 ? weekSummary : [];
+                const updatedSummary = applyToSummary(base).map((day) => ({
                     ...day,
                     total: { ...day.total },
                     categories: day.categories.map((cat) => ({ ...cat })),
                 }));
-
-                // Atualiza o estado imediatamente
-                setWeekSummary(newSummary);
-                currentWeekSummaryRef.current = newSummary;
-                // Atualiza o cache com os dados otimistas
-                weekSummaryCacheRef.current.set(cacheKey, newSummary);
+                setWeekSummary(updatedSummary);
+                currentWeekSummaryRef.current = updatedSummary;
+                weekSummaryCacheRef.current.set(cacheKey, updatedSummary);
+            } else {
+                const cached = weekSummaryCacheRef.current.get(cacheKey) || [];
+                const updatedCached = applyToSummary(cached);
+                weekSummaryCacheRef.current.set(cacheKey, updatedCached);
             }
-
         },
-        [weekSummary, fetchWeekSummary]
+        [weekSummary]
     );
 
     // Anima quando os todos mudam de posição ou status e atualiza o summary

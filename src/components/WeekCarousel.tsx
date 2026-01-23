@@ -145,8 +145,8 @@ export function WeekCarousel({
         weekWidth,
         gapBetweenItems,
         scrollToCurrentWeek,
-        handleScroll,
-        handleScrollEnd,
+        handleMomentumScrollEnd,
+        handleScrollEndDrag,
         isDayComplete,
         getDayColor,
     } = useWeekCarouselViewModel({
@@ -184,12 +184,14 @@ export function WeekCarousel({
                 keyExtractor={(item) => item.dateString}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                onScroll={handleScroll}
-                onMomentumScrollEnd={handleScrollEnd}
-                scrollEventThrottle={16}
+                onMomentumScrollEnd={handleMomentumScrollEnd}
+                onScrollEndDrag={handleScrollEndDrag}
                 snapToInterval={weekWidth}
                 snapToAlignment="start"
                 decelerationRate="fast"
+                initialNumToRender={21}
+                maxToRenderPerBatch={14}
+                windowSize={7}
                 onLayout={() => {
                     if (!hasScrolledToWeek.current) {
                         setTimeout(() => {
@@ -204,20 +206,11 @@ export function WeekCarousel({
                         }, 150);
                     }
                 }}
-                getItemLayout={(data, index) => ({
+                getItemLayout={(_, index) => ({
                     length: itemWidthWithGap,
                     offset: itemWidthWithGap * index,
                     index,
                 })}
-                onScrollToIndexFailed={(info) => {
-                    const offset = info.index * itemWidthWithGap;
-                    setTimeout(() => {
-                        weekDaysListRef.current?.scrollToOffset({
-                            offset: offset,
-                            animated: false,
-                        });
-                    }, 100);
-                }}
                 contentContainerStyle={styles.weekCarouselContent}
             />
         </View>
