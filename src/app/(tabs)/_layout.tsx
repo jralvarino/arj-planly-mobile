@@ -51,6 +51,7 @@ export default function TabsLayout() {
                 <Tabs.Screen
                     name="habits"
                     options={{
+                        tabBarShowLabel: false,
                         headerTitle: () => (
                             <View style={styles.headerTitleContainer}>
                                 <Text style={styles.headerTitleText}>Habits</Text>
@@ -77,12 +78,13 @@ export default function TabsLayout() {
                 <Tabs.Screen
                     name="statistics"
                     options={{
+                        tabBarShowLabel: false,
                         headerTitle: "Statistics",
                         tabBarLabel: "Statistics",
                         tabBarIcon: ({ focused, color }) => (
                             <View>
                                 <Ionicons
-                                    name={focused ? "calendar" : "calendar-outline"}
+                                    name={focused ? "pulse" : "pulse-outline"}
                                     size={30}
                                     color={focused ? colors.primary : "gray"}
                                 />
@@ -94,6 +96,7 @@ export default function TabsLayout() {
                 <Tabs.Screen
                     name="categories"
                     options={{
+                        tabBarShowLabel: false,
                         headerTitle: () => (
                             <View style={styles.headerTitleContainer}>
                                 <Text style={styles.headerTitleText}>Category</Text>
@@ -117,21 +120,6 @@ export default function TabsLayout() {
                     }}
                 />
 
-                <Tabs.Screen
-                    name="config"
-                    options={{
-                        tabBarLabel: "Settings",
-                        tabBarIcon: ({ focused, color }) => (
-                            <View>
-                                <Ionicons
-                                    name={focused ? "settings" : "settings-outline"}
-                                    size={24}
-                                    color={focused ? colors.primary : "gray"}
-                                />
-                            </View>
-                        ),
-                    }}
-                />
             </Tabs>
             <BurgerMenu visible={burgerOpen} onClose={() => setBurgerOpen(false)} />
         </>

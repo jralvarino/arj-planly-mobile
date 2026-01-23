@@ -22,7 +22,6 @@ export function useTodoViewModel() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
-    const [updating, setUpdating] = useState(false);
     const soundRef = useRef<Audio.Sound | null>(null);
     const trumpetsSoundRef = useRef<Audio.Sound | null>(null);
     const todosRef = useRef<Todo[]>([]);
@@ -143,7 +142,7 @@ export function useTodoViewModel() {
     }, [fetchCategories]);
 
     const handleToggleTodo = useCallback(
-        async (todoId: string, currentStatus: TodoStatus, progressValue: string, notes: string = "", date?: string) => {
+        async (todoId: string, currentStatus: TodoStatus, progressValue: string, date?: string) => {
             const newStatus = currentStatus === TODO_STATUS.DONE ? TODO_STATUS.PENDING : TODO_STATUS.DONE;
 
             // Usa a data selecionada ou a data de hoje como padrão
@@ -159,7 +158,7 @@ export function useTodoViewModel() {
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, status: newStatus, progressValue, notes } : todo
+                    todo.id === todoId ? { ...todo, status: newStatus, progressValue } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -221,7 +220,7 @@ export function useTodoViewModel() {
                     // Reverte a mudança otimista em caso de erro
                     setTodos((prevTodos) => {
                         const revertedTodos = prevTodos.map((todo) =>
-                            todo.id === todoId ? { ...todo, status: currentStatus, progressValue, notes } : todo
+                            todo.id === todoId ? { ...todo, status: currentStatus, progressValue } : todo
                         );
                         const sortedData = sortTodos(revertedTodos);
                         todosRef.current = sortedData;
@@ -236,14 +235,14 @@ export function useTodoViewModel() {
     );
 
     const handleSkipTodo = useCallback(
-        async (todoId: string, progressValue: string, notes: string = "", date?: string) => {
+        async (todoId: string, progressValue: string, date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
 
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0", notes } : todo
+                    todo.id === todoId ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0" } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -274,7 +273,7 @@ export function useTodoViewModel() {
                             return prevTodos;
                         }
                         const revertedTodos = prevTodos.map((todo) =>
-                            todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue, notes } : todo
+                            todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue } : todo
                         );
                         const sortedData = sortTodos(revertedTodos);
                         todosRef.current = sortedData;
@@ -288,14 +287,14 @@ export function useTodoViewModel() {
     );
 
     const handleUndoSkip = useCallback(
-        async (todoId: string, notes: string = "", date?: string) => {
+        async (todoId: string, date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
 
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue: "0", notes } : todo
+                    todo.id === todoId ? { ...todo, status: TODO_STATUS.PENDING, progressValue: "0" } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -322,7 +321,7 @@ export function useTodoViewModel() {
                     setTodos((prevTodos) => {
                         const updatedTodos = prevTodos.map((todo) =>
                             todo.id === todoId
-                                ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0", notes }
+                                ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0" }
                                 : todo
                         );
                         const sortedData = sortTodos(updatedTodos);
@@ -342,12 +341,11 @@ export function useTodoViewModel() {
             todoTitle: string,
             currentStatus: TodoStatus,
             progressValue: string,
-            notes: string = "",
             date?: string
         ) => {
             // Se o status for skipped, faz undo (volta para pending)
             if (currentStatus === TODO_STATUS.SKIPPED) {
-                handleUndoSkip(todoId, notes, date);
+                handleUndoSkip(todoId, date);
                 return;
             }
 
@@ -363,7 +361,7 @@ export function useTodoViewModel() {
             }
 
             // Faz skip diretamente
-            handleSkipTodo(todoId, progressValue, notes, date);
+            handleSkipTodo(todoId, progressValue, date);
         },
         [handleSkipTodo, handleUndoSkip]
     );
@@ -385,7 +383,7 @@ export function useTodoViewModel() {
     }, []);
 
     const handleSaveTodo = useCallback(
-        async (todoId: string, status: TodoStatus, progressValue: string, notes: string = "", date?: string) => {
+        async (todoId: string, status: TodoStatus, progressValue: string, date?: string) => {
             // Usa a data selecionada ou a data de hoje como padrão
             const targetDate = date || getTodayDate();
 
@@ -397,7 +395,6 @@ export function useTodoViewModel() {
             const previousTodo = todosRef.current.find((t) => t.id === todoId);
             const previousStatus = previousTodo?.status || TODO_STATUS.PENDING;
             const previousProgressValue = previousTodo?.progressValue || "0";
-            const previousNotes = previousTodo?.notes || "";
 
             // Verifica se é o último todo do dia ANTES de atualizar (quando está completando)
             let isLastTodo = false;
@@ -409,7 +406,7 @@ export function useTodoViewModel() {
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, status, progressValue: finalProgressValue, notes } : todo
+                    todo.id === todoId ? { ...todo, status, progressValue: finalProgressValue } : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
@@ -458,7 +455,6 @@ export function useTodoViewModel() {
                                       ...todo,
                                       status: previousStatus,
                                       progressValue: previousProgressValue,
-                                      notes: previousNotes,
                                   }
                                 : todo
                         );
@@ -536,7 +532,6 @@ export function useTodoViewModel() {
         loading,
         error,
         refreshing,
-        updating,
         handleRefresh,
         handleFocus,
         fetchTodosByDate: fetchTodos,

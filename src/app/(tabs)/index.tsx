@@ -31,7 +31,6 @@ export default function HomeScreen() {
         loading,
         error,
         refreshing,
-        updating,
         handleRefresh,
         handleFocus,
         fetchTodosByDate,
@@ -39,7 +38,6 @@ export default function HomeScreen() {
         handleSkipTodoWithConfirmation,
         handleSaveTodo,
         handleSaveNotes,
-        playCompletionSound,
     } = useTodoViewModel();
     
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -152,26 +150,24 @@ export default function HomeScreen() {
                         todo={item}
                         categories={categories}
                         selectedDate={selectedDate}
-                        onToggle={(todoId, status, progressValue, notes, date) =>
-                            handleToggleTodo(todoId, status, progressValue, notes, date || selectedDate)
+                        onToggle={(todoId, status, progressValue, date) =>
+                            handleToggleTodo(todoId, status, progressValue, date || selectedDate)
                         }
-                        onSkip={(todoId, title, status, progressValue, notes, date) =>
+                        onSkip={(todoId, title, status, progressValue, date) =>
                             handleSkipTodoWithConfirmation(
                                 todoId,
                                 title,
                                 status,
                                 progressValue,
-                                notes,
                                 date || selectedDate
                             )
                         }
-                        onSave={(todoId, status, progressValue, notes, date) =>
-                            handleSaveTodo(todoId, status, progressValue, notes, date || selectedDate)
+                        onSave={(todoId, status, progressValue, date) =>
+                            handleSaveTodo(todoId, status, progressValue, date || selectedDate)
                         }
                         onSaveNotes={(todoId, notes, date) =>
                             handleSaveNotes(todoId, notes, date || selectedDate)
                         }
-                        onPlayCompletionSound={playCompletionSound}
                     />
                 </>
             );
@@ -180,7 +176,6 @@ export default function HomeScreen() {
             handleToggleTodo,
             handleSkipTodoWithConfirmation,
             handleSaveTodo,
-            playCompletionSound,
             categories,
             filteredTodos,
             allTodosDoneOrSkipped,
@@ -247,10 +242,10 @@ export default function HomeScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
                 }
             />
-            {(loading || updating) && (
+            {loading && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>{loading ? "Loading todos..." : "Updating..."}</Text>
+                    <Text style={styles.loadingText}>Loading todos...</Text>
                 </View>
             )}
         </View>

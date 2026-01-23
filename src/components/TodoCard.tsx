@@ -14,18 +14,16 @@ interface TodoCardProps {
     todo: Todo;
     categories?: Category[];
     selectedDate?: string;
-    onToggle?: (todoId: string, currentStatus: TodoStatus, progressValue: string, notes: string, date?: string) => void;
+    onToggle?: (todoId: string, currentStatus: TodoStatus, progressValue: string, date?: string) => void;
     onSkip?: (
         todoId: string,
         todoTitle: string,
         currentStatus: TodoStatus,
         progressValue: string,
-        notes: string,
         date?: string
     ) => void;
-    onSave?: (todoId: string, status: TodoStatus, progressValue: string, notes: string, date?: string) => void;
+    onSave?: (todoId: string, status: TodoStatus, progressValue: string, date?: string) => void;
     onSaveNotes?: (todoId: string, notes: string, date?: string) => void;
-    onPlayCompletionSound?: () => void;
 }
 
 export function TodoCard({
@@ -36,7 +34,6 @@ export function TodoCard({
     onSkip,
     onSave,
     onSaveNotes,
-    onPlayCompletionSound,
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -143,12 +140,12 @@ export function TodoCard({
             const finalValue = "0";
             setModalProgressValue(finalValue);
             setModalStatus(newStatus);
-            onSave?.(todo.id, newStatus, finalValue, todo.notes || "", selectedDate);
+            onSave?.(todo.id, newStatus, finalValue, selectedDate);
             return;
         }
 
         setModalProgressValue(newValue);
-        onSave?.(todo.id, newStatus, newValue, todo.notes || "", selectedDate);
+        onSave?.(todo.id, newStatus, newValue, selectedDate);
     };
 
     const handleIncrementProgress = () => {
@@ -168,7 +165,7 @@ export function TodoCard({
 
         setModalProgressValue(newValue);
         setModalStatus(newStatus);
-        onSave?.(todo.id, newStatus, newValue, todo.notes || "", selectedDate);
+        onSave?.(todo.id, newStatus, newValue, selectedDate);
     };
 
     const handleSkip = () => {
@@ -177,7 +174,7 @@ export function TodoCard({
             swipeableRef.current?.close();
             return;
         }
-        onSkip?.(todo.id, todo.title, todo.status, todo.progressValue, todo.notes || "", selectedDate);
+        onSkip?.(todo.id, todo.title, todo.status, todo.progressValue, selectedDate);
         swipeableRef.current?.close();
     };
 
@@ -280,6 +277,11 @@ export function TodoCard({
                                             <Text style={styles.inactiveTagText}>Inactive</Text>
                                         </View>
                                     )}
+                                    {todo.notes && todo.notes.trim() !== "" && (
+                                        <View style={styles.notesIconContainer}>
+                                            <Ionicons name="chatbox-ellipses-outline" size={15} color={colors.primary} />
+                                        </View>
+                                    )}
                                 </View>
                             </View>
                             <Pressable
@@ -295,7 +297,6 @@ export function TodoCard({
                                         todo.id,
                                         todo.status,
                                         todo.progressValue,
-                                        todo.notes || "",
                                         selectedDate
                                     );
                                 }}
@@ -464,33 +465,14 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         color: colors.text.body,
     },
+    notesIconContainer: {
+        justifyContent: "center",
+        alignItems: "center",
+        marginLeft: 3,
+        marginTop: 2,
+    },
     details: {
         gap: 6,
-    },
-    detailRow: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    detailLabel: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.body,
-        marginRight: 8,
-        minWidth: 70,
-    },
-    detailValue: {
-        fontSize: 12,
-        color: colors.text.title,
-    },
-    streakContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-    streakValue: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: colors.text.title,
     },
     progressContainer: {
         flexDirection: "row",
@@ -511,11 +493,6 @@ const styles = StyleSheet.create({
         backgroundColor: "#10B981",
         borderRadius: 4,
     },
-    progressValue: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.title,
-    },
     checkButton: {
         justifyContent: "center",
         alignItems: "center",
@@ -524,30 +501,6 @@ const styles = StyleSheet.create({
     },
     checkButtonDone: {
         // Estilo adicional quando está marcado
-    },
-    notesContainer: {
-        marginTop: 4,
-        padding: 8,
-        backgroundColor: colors.gray[100],
-        borderRadius: 6,
-    },
-    notesLabel: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.body,
-        marginBottom: 4,
-    },
-    notesText: {
-        fontSize: 12,
-        color: colors.text.title,
-    },
-    leftAction: {
-        justifyContent: "center",
-        alignItems: "flex-start",
-        marginBottom: 12,
-        borderRadius: 12,
-        overflow: "hidden",
-        minHeight: 80,
     },
     notesButton: {
         backgroundColor: colors.primary,
@@ -616,24 +569,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.gray[300],
         width: 40,
         height: 4,
-    },
-    modalStreakTag: {
-        position: "absolute",
-        top: 10,
-        right: 15,
-        backgroundColor: colors.gray[100],
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        zIndex: 10,
-    },
-    modalStreakTagText: {
-        color: "black",
-        fontSize: 16,
-        fontWeight: "600",
     },
     notesModalHeader: {
         padding: 10,
