@@ -1,10 +1,12 @@
 import { colors } from "@/theme/colors";
 import { COLORS_HABIT, WEEK_DAYS } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import BottomSheetModal, { BottomSheetView } from "@gorhom/bottom-sheet";
 import moment from "moment";
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    Dimensions,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -18,6 +20,7 @@ import {
     View,
 } from "react-native";
 import Emoji from "react-native-emoji";
+import EmojiSelector, { Categories } from "react-native-emoji-selector";
 import { useHabitFormViewModel } from "../viewmodels/habit/useHabitFormViewModel";
 import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
@@ -29,376 +32,6 @@ const UNIT_OPTIONS: Array<{ code: "count" | "pg" | "km" | "ml"; label: string }>
     { code: "ml", label: "Ml" },
 ];
 
-const POPULAR_EMOJIS = [
-    "smile",
-    "heart",
-    "thumbsup",
-    "fire",
-    "star",
-    "coffee",
-    "book",
-    "muscle",
-    "running",
-    "bicycle",
-    "apple",
-    "pizza",
-    "sleeping",
-    "sunny",
-    "rainbow",
-    "rocket",
-    "trophy",
-    "medal",
-    "musical_note",
-    "art",
-    "pencil",
-    "computer",
-    "phone",
-    "camera",
-    "movie_camera",
-    "game_die",
-    "soccer",
-    "basketball",
-    "tennis",
-    "swimmer",
-    "yoga",
-    "meditation",
-    "pray",
-    "peace_symbol",
-    "clap",
-    "wave",
-    "point_right",
-    "ok_hand",
-    "v",
-    "thumbsdown",
-    "punch",
-    "fist",
-    "hand",
-    "point_up",
-    "point_down",
-    "point_left",
-    "raised_hand",
-    "open_hands",
-    "palms_up_together",
-    "handshake",
-    "pray",
-    "writing_hand",
-    "nail_care",
-    "selfie",
-    "muscle",
-    "mechanical_arm",
-    "mechanical_leg",
-    "leg",
-    "foot",
-    "ear",
-    "eye",
-    "nose",
-    "brain",
-    "tooth",
-    "bone",
-    "eyes",
-    "eye",
-    "tongue",
-    "lips",
-    "baby",
-    "child",
-    "boy",
-    "girl",
-    "adult",
-    "older_adult",
-    "older_person",
-    "man",
-    "woman",
-    "person_with_blond_hair",
-    "man_with_gua_pi_mao",
-    "person_with_headscarf",
-    "person_in_tuxedo",
-    "person_with_veil",
-    "pregnant_woman",
-    "breast_feeding",
-    "woman_feeding_baby",
-    "angel",
-    "santa",
-    "mrs_claus",
-    "mx_claus",
-    "superhero",
-    "supervillain",
-    "mage",
-    "fairy",
-    "vampire",
-    "merperson",
-    "elf",
-    "genie",
-    "zombie",
-    "brain",
-    "orange_heart",
-    "yellow_heart",
-    "green_heart",
-    "blue_heart",
-    "purple_heart",
-    "black_heart",
-    "white_heart",
-    "brown_heart",
-    "heart_exclamation",
-    "two_hearts",
-    "revolving_hearts",
-    "heartbeat",
-    "heartpulse",
-    "sparkling_heart",
-    "cupid",
-    "gift_heart",
-    "heart_decoration",
-    "peace_symbol",
-    "latin_cross",
-    "star_and_crescent",
-    "om",
-    "wheel_of_dharma",
-    "star_of_david",
-    "six_pointed_star",
-    "menorah",
-    "yin_yang",
-    "orthodox_cross",
-    "place_of_worship",
-    "ophiuchus",
-    "aries",
-    "taurus",
-    "gemini",
-    "cancer",
-    "leo",
-    "virgo",
-    "libra",
-    "scorpius",
-    "sagittarius",
-    "capricorn",
-    "aquarius",
-    "pisces",
-    "id",
-    "atom_symbol",
-    "u7a7a",
-    "u5272",
-    "radioactive",
-    "biohazard",
-    "mobile_phone_off",
-    "vibration_mode",
-    "u6709",
-    "u7121",
-    "u7533",
-    "u55b6",
-    "u6708",
-    "eight_pointed_black_star",
-    "vs",
-    "accept",
-    "white_flower",
-    "ideograph_advantage",
-    "secret",
-    "congratulations",
-    "u5408",
-    "u6e80",
-    "u7981",
-    "a",
-    "b",
-    "ab",
-    "cl",
-    "o2",
-    "sos",
-    "no_entry",
-    "name_badge",
-    "no_entry_sign",
-    "x",
-    "o",
-    "stop_sign",
-    "anger",
-    "hotsprings",
-    "no_pedestrians",
-    "do_not_litter",
-    "no_bicycles",
-    "non_potable_water",
-    "underage",
-    "no_mobile_phones",
-    "exclamation",
-    "grey_exclamation",
-    "question",
-    "grey_question",
-    "bangbang",
-    "interrobang",
-    "100",
-    "low_brightness",
-    "high_brightness",
-    "trident",
-    "fleur_de_lis",
-    "part_alternation_mark",
-    "warning",
-    "children_crossing",
-    "beginner",
-    "recycle",
-    "u6307",
-    "chart",
-    "sparkle",
-    "eight_spoked_asterisk",
-    "negative_squared_cross_mark",
-    "white_check_mark",
-    "diamond_shape_with_a_dot_inside",
-    "cyclone",
-    "loop",
-    "globe_with_meridians",
-    "m",
-    "atm",
-    "sa",
-    "passport_control",
-    "customs",
-    "baggage_claim",
-    "left_luggage",
-    "wheelchair",
-    "no_smoking",
-    "wc",
-    "parking",
-    "potable_water",
-    "mens",
-    "womens",
-    "baby_symbol",
-    "restroom",
-    "put_litter_in_its_place",
-    "cinema",
-    "signal_strength",
-    "koko",
-    "ng",
-    "ok",
-    "up",
-    "cool",
-    "new",
-    "free",
-    "zero",
-    "one",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-    "nine",
-    "keycap_ten",
-    "asterisk",
-    "arrow_forward",
-    "pause_button",
-    "next_track_button",
-    "stop_button",
-    "record_button",
-    "play_or_pause_button",
-    "previous_track_button",
-    "fast_forward",
-    "rewind",
-    "twisted_rightwards_arrows",
-    "repeat",
-    "repeat_one",
-    "arrow_backward",
-    "arrow_up_small",
-    "arrow_down_small",
-    "arrow_right",
-    "arrow_left",
-    "arrow_up",
-    "arrow_down",
-    "arrow_upper_right",
-    "arrow_lower_right",
-    "arrow_lower_left",
-    "arrow_upper_left",
-    "arrow_up_down",
-    "left_right_arrow",
-    "arrows_counterclockwise",
-    "arrow_right_hook",
-    "leftwards_arrow_with_hook",
-    "arrow_heading_up",
-    "arrow_heading_down",
-    "arrows_clockwise",
-    "hash",
-    "information_source",
-    "abc",
-    "abcd",
-    "capital_abcd",
-    "symbols",
-    "musical_note",
-    "notes",
-    "wavy_dash",
-    "curly_loop",
-    "heavy_check_mark",
-    "arrows_clockwise",
-    "heavy_plus_sign",
-    "heavy_minus_sign",
-    "heavy_division_sign",
-    "heavy_multiplication_x",
-    "infinity",
-    "heavy_dollar_sign",
-    "currency_exchange",
-    "copyright",
-    "registered",
-    "tm",
-    "end",
-    "back",
-    "on",
-    "top",
-    "soon",
-    "ballot_box_with_check",
-    "radio_button",
-    "white_circle",
-    "black_circle",
-    "red_circle",
-    "large_blue_circle",
-    "small_orange_diamond",
-    "small_blue_diamond",
-    "large_orange_diamond",
-    "large_blue_diamond",
-    "small_red_triangle",
-    "small_red_triangle_down",
-    "diamond_shape_with_a_dot_inside",
-    "radio_button",
-    "white_square_button",
-    "black_square_button",
-    "black_small_square",
-    "white_small_square",
-    "black_medium_small_square",
-    "white_medium_small_square",
-    "black_medium_square",
-    "white_medium_square",
-    "black_large_square",
-    "white_large_square",
-    "speaker",
-    "mute",
-    "sound",
-    "loud_sound",
-    "bell",
-    "no_bell",
-    "mega",
-    "loudspeaker",
-    "speech_left",
-    "eye_in_speech_bubble",
-    "speech_balloon",
-    "thought_balloon",
-    "right_anger_bubble",
-    "spades",
-    "clubs",
-    "hearts",
-    "diamonds",
-    "flower_playing_cards",
-    "mahjong",
-    "black_joker",
-    "a",
-    "b",
-    "o2",
-    "parking",
-    "ab",
-    "cl",
-    "cool",
-    "free",
-    "information_source",
-    "id",
-    "m",
-    "new",
-    "ng",
-    "o2",
-    "ok",
-    "parking",
-    "sos",
-];
-
 export function HabitFormScreen() {
     const [showWeekDaysModal, setShowWeekDaysModal] = useState(false);
     const [showMonthDaysModal, setShowMonthDaysModal] = useState(false);
@@ -407,6 +40,7 @@ export function HabitFormScreen() {
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [showEmojiModal, setShowEmojiModal] = useState(false);
+    const emojiBottomSheetRef = useRef<BottomSheetModal>(null);
     const {
         title,
         description,
@@ -444,67 +78,116 @@ export function HabitFormScreen() {
         setActive,
         handleActiveChange,
         handleSubmit,
+        selectedDays,
+        selectedMonthDays,
+        monthDays,
+        toggleDay,
+        toggleMonthDay,
+        handlePeriodTypeChange,
     } = useHabitFormViewModel();
 
-    // Parse periodValue to array of selected days
-    // For week days, only parse if periodType is specific_days_week
-    const selectedDays =
-        periodType === "specific_days_week" && periodValue
-            ? periodValue
-                  .split(",")
-                  .map((day) => day.trim())
-                  .filter((day) => day !== "")
-            : [];
-
-    // For month days, only parse if periodType is specific_days_month
-    const selectedMonthDays =
-        periodType === "specific_days_month" && periodValue
-            ? periodValue
-                  .split(",")
-                  .map((day) => day.trim())
-                  .filter((day) => day !== "")
-            : [];
-
-    // Generate array of month days (1-31)
-    const monthDays = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-
-    // Toggle day selection (for week days)
-    const toggleDay = (dayCode: string) => {
-        const isSelected = selectedDays.includes(dayCode);
-        let newDays: string[];
-        if (isSelected) {
-            newDays = selectedDays.filter((day) => day !== dayCode);
-        } else {
-            newDays = [...selectedDays, dayCode];
+    // Handler para abrir o modal de emoji
+    const handlePresentEmojiModal = useCallback(() => {
+        setShowEmojiModal(true);
+        const ref = emojiBottomSheetRef.current as any;
+        if (ref) {
+            // Se tiver o método present, usa ele (BottomSheetModal)
+            if (typeof ref.present === "function") {
+                ref.present();
+            }
+            // Caso contrário, usa snapToIndex(0) para abrir (BottomSheet regular)
+            else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            }
+            // Ou expand() como fallback
+            else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
         }
-        setPeriodValue(newDays.join(","));
-    };
+    }, []);
 
-    // Toggle month day selection
-    const toggleMonthDay = (day: string) => {
-        const isSelected = selectedMonthDays.includes(day);
-        let newDays: string[];
-        if (isSelected) {
-            newDays = selectedMonthDays.filter((d) => d !== day);
-        } else {
-            newDays = [...selectedMonthDays, day];
+    // Handler para fechar o modal de emoji
+    const handleDismissEmojiModal = useCallback(() => {
+        setShowEmojiModal(false);
+        const ref = emojiBottomSheetRef.current as any;
+        if (ref) {
+            // Tenta forceClose() primeiro (força o fechamento)
+            if (ref.forceClose) {
+                ref.forceClose();
+            }
+            // Fallback para close()
+            else if (ref.close) {
+                ref.close();
+            }
+            // Fallback para snapToIndex(-1)
+            else if (ref.snapToIndex) {
+                ref.snapToIndex(-1);
+            }
         }
-        setPeriodValue(newDays.join(","));
-    };
+    }, []);
 
     // Handle period type change - open modal if specific_days_week or specific_days_month
-    const handlePeriodTypeChange = (type: "every_day" | "specific_days_week" | "specific_days_month") => {
-        // Clear periodValue if changing to every_day or to a different type
-        if (type === "every_day" || periodType !== type) {
-            setPeriodValue("");
-        }
-        setPeriodType(type);
-        if (type === "specific_days_week") {
-            setShowWeekDaysModal(true);
-        } else if (type === "specific_days_month") {
-            setShowMonthDaysModal(true);
-        }
-    };
+    const handlePeriodTypeChangeWithModal = useCallback(
+        (type: "every_day" | "specific_days_week" | "specific_days_month") => {
+            handlePeriodTypeChange(type);
+            if (type === "specific_days_week") {
+                setShowWeekDaysModal(true);
+            } else if (type === "specific_days_month") {
+                setShowMonthDaysModal(true);
+            }
+        },
+        [handlePeriodTypeChange]
+    );
+
+    // Memoized handlers for better performance
+    const handleSetPeriod = useCallback(
+        (periodValue: "Anytime" | "Morning" | "Afternoon" | "Evening") => {
+            setPeriod(periodValue);
+        },
+        [setPeriod]
+    );
+
+    const handleSetColor = useCallback(
+        (colorValue: string) => {
+            setColor(colorValue);
+        },
+        [setColor]
+    );
+
+    const handleSetCategoryId = useCallback(
+        (id: string) => {
+            setCategoryId(id);
+        },
+        [setCategoryId]
+    );
+
+    // Memoized handler for emoji selection
+    const handleEmojiSelected = useCallback(
+        (emojiChar: string) => {
+            setEmoji(emojiChar);
+            setShowEmojiModal(false);
+            const ref = emojiBottomSheetRef.current as any;
+            if (ref) {
+                if (ref.forceClose) {
+                    ref.forceClose();
+                } else if (ref.close) {
+                    ref.close();
+                } else if (ref.snapToIndex) {
+                    ref.snapToIndex(-1);
+                }
+            }
+        },
+        [setEmoji]
+    );
+
+    // Calculate available height for emoji selector
+    const emojiSelectorHeight = useMemo(() => {
+        const screenHeight = Dimensions.get("window").height;
+        const modalHeight = screenHeight * 0.95; // 95% snapPoint
+        const headerHeight = 60; // Approximate header height
+        const padding = 100; // Increased padding to ensure last row is visible
+        return modalHeight - headerHeight - padding;
+    }, []);
 
     if (categoriesLoading) {
         return (
@@ -518,11 +201,19 @@ export function HabitFormScreen() {
     }
 
     return (
-        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                removeClippedSubviews={Platform.OS === "android"}
+                scrollEventThrottle={16}
+                nestedScrollEnabled={true}
             >
                 {/* Inactive Warning Tag */}
                 {isEditMode && !active && (
@@ -539,11 +230,11 @@ export function HabitFormScreen() {
                         <View style={styles.titleRow}>
                             <TouchableOpacity
                                 style={styles.emojiSelectorIcon}
-                                onPress={() => setShowEmojiModal(true)}
+                                onPress={handlePresentEmojiModal}
                                 activeOpacity={0.7}
                             >
                                 {emoji ? (
-                                    <Emoji name={emoji} style={styles.emojiSelectorIconText} />
+                                    <Text style={styles.emojiSelectorIconText}>{emoji}</Text>
                                 ) : (
                                     <Text style={styles.emojiSelectorIconText}>😀</Text>
                                 )}
@@ -554,6 +245,10 @@ export function HabitFormScreen() {
                                 value={title}
                                 onChangeText={setTitle}
                                 maxLength={100}
+                                returnKeyType="next"
+                                blurOnSubmit={false}
+                                textContentType="none"
+                                autoCorrect={false}
                             />
                         </View>
                     </View>
@@ -569,25 +264,34 @@ export function HabitFormScreen() {
                             multiline
                             numberOfLines={3}
                             maxLength={500}
+                            returnKeyType="done"
+                            blurOnSubmit={true}
+                            textContentType="none"
+                            autoCorrect={false}
                         />
                     </View>
 
                     {/* Color Selector */}
                     <View style={styles.section}>
                         <View style={styles.colorRow}>
-                            {COLORS_HABIT.map((colorItem) => (
-                                <TouchableOpacity
-                                    key={colorItem}
-                                    onPress={() => setColor(colorItem)}
-                                    style={[
-                                        styles.colorOption,
-                                        { backgroundColor: colorItem },
-                                        color === colorItem && styles.colorOptionSelected,
-                                    ]}
-                                >
-                                    {color === colorItem && <Text style={styles.colorCheckmark}>✓</Text>}
-                                </TouchableOpacity>
-                            ))}
+                            {COLORS_HABIT.map((colorItem) => {
+                                const isSelected = color === colorItem;
+                                return (
+                                    <TouchableOpacity
+                                        key={colorItem}
+                                        onPress={() => handleSetColor(colorItem)}
+                                        style={[
+                                            styles.colorOption,
+                                            { backgroundColor: colorItem },
+                                            isSelected && styles.colorOptionSelected,
+                                        ]}
+                                        activeOpacity={0.7}
+                                        delayPressIn={0}
+                                    >
+                                        {isSelected && <Text style={styles.colorCheckmark}>✓</Text>}
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </View>
                 </View>
@@ -600,25 +304,27 @@ export function HabitFormScreen() {
                         </View>
                         {categories.length > 0 ? (
                             <View style={styles.categoryRow}>
-                                {categories.map((category) => (
-                                    <TouchableOpacity
-                                        key={category.id}
-                                        onPress={() => setCategoryId(category.id)}
-                                        style={[
-                                            styles.categoryTag,
-                                            categoryId === category.id && styles.categoryTagSelected,
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.categoryTagText,
-                                                categoryId === category.id && styles.categoryTagTextSelected,
-                                            ]}
+                                {categories.map((category) => {
+                                    const isSelected = categoryId === category.id;
+                                    return (
+                                        <TouchableOpacity
+                                            key={category.id}
+                                            onPress={() => handleSetCategoryId(category.id)}
+                                            style={[styles.categoryTag, isSelected && styles.categoryTagSelected]}
+                                            activeOpacity={0.7}
+                                            delayPressIn={0}
                                         >
-                                            {category.name}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                            <Text
+                                                style={[
+                                                    styles.categoryTagText,
+                                                    isSelected && styles.categoryTagTextSelected,
+                                                ]}
+                                            >
+                                                {category.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
                             </View>
                         ) : (
                             <Text style={styles.emptyCategoriesText}>No categories available</Text>
@@ -636,13 +342,16 @@ export function HabitFormScreen() {
                             horizontal
                             showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.periodTypeScrollContainer}
+                            keyboardShouldPersistTaps="handled"
+                            removeClippedSubviews={true}
                         >
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("every_day")}
+                                onPress={() => handlePeriodTypeChangeWithModal("every_day")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "every_day" && styles.periodTypeTagSelected,
                                 ]}
+                                activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
@@ -654,11 +363,12 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("specific_days_week")}
+                                onPress={() => handlePeriodTypeChangeWithModal("specific_days_week")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "specific_days_week" && styles.periodTypeTagSelected,
                                 ]}
+                                activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
@@ -670,11 +380,12 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("specific_days_month")}
+                                onPress={() => handlePeriodTypeChangeWithModal("specific_days_month")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "specific_days_month" && styles.periodTypeTagSelected,
                                 ]}
+                                activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
@@ -694,7 +405,7 @@ export function HabitFormScreen() {
                                             .split(",")
                                             .filter((day) => day.trim() !== "")
                                             .map((day, index) => (
-                                                <View key={index} style={styles.selectedValueChip}>
+                                                <View key={`${day}-${index}`} style={styles.selectedValueChip}>
                                                     <Text style={styles.selectedValueChipText}>{day.trim()}</Text>
                                                 </View>
                                             ))}
@@ -721,6 +432,8 @@ export function HabitFormScreen() {
                                     onChangeText={setValue}
                                     keyboardType="numeric"
                                     maxLength={10}
+                                    returnKeyType="done"
+                                    blurOnSubmit={true}
                                 />
                             </View>
                             <View style={styles.unitContainer}>
@@ -742,24 +455,30 @@ export function HabitFormScreen() {
                         </View>
                         <View style={styles.timeTagsRow}>
                             <TouchableOpacity
-                                onPress={() => setPeriod("Anytime")}
+                                onPress={() => handleSetPeriod("Anytime")}
                                 style={[styles.timeTag, period === "Anytime" && styles.timeTagSelected]}
+                                activeOpacity={0.7}
+                                delayPressIn={0}
                             >
                                 <Text style={[styles.timeTagText, period === "Anytime" && styles.timeTagTextSelected]}>
                                     Anytime
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => setPeriod("Morning")}
+                                onPress={() => handleSetPeriod("Morning")}
                                 style={[styles.timeTag, period === "Morning" && styles.timeTagSelected]}
+                                activeOpacity={0.7}
+                                delayPressIn={0}
                             >
                                 <Text style={[styles.timeTagText, period === "Morning" && styles.timeTagTextSelected]}>
                                     Morning
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => setPeriod("Afternoon")}
+                                onPress={() => handleSetPeriod("Afternoon")}
                                 style={[styles.timeTag, period === "Afternoon" && styles.timeTagSelected]}
+                                activeOpacity={0.7}
+                                delayPressIn={0}
                             >
                                 <Text
                                     style={[styles.timeTagText, period === "Afternoon" && styles.timeTagTextSelected]}
@@ -768,8 +487,10 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => setPeriod("Evening")}
+                                onPress={() => handleSetPeriod("Evening")}
                                 style={[styles.timeTag, period === "Evening" && styles.timeTagSelected]}
+                                activeOpacity={0.7}
+                                delayPressIn={0}
                             >
                                 <Text style={[styles.timeTagText, period === "Evening" && styles.timeTagTextSelected]}>
                                     Evening
@@ -1062,43 +783,46 @@ export function HabitFormScreen() {
                 onConfirm={(date) => setEndDate(date)}
             />
 
-            {/* Emoji Selection Modal */}
-            <Modal
-                visible={showEmojiModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowEmojiModal(false)}
+            {/* Emoji Selection Bottom Sheet */}
+            <BottomSheetModal
+                ref={emojiBottomSheetRef}
+                index={-1}
+                snapPoints={["95%"]}
+                enablePanDownToClose={true}
+                backgroundStyle={styles.emojiBottomSheetBackground}
+                handleIndicatorStyle={styles.emojiBottomSheetIndicator}
+                keyboardBehavior="interactive"
+                keyboardBlurBehavior="restore"
+                android_keyboardInputMode="adjustResize"
             >
-                <Pressable style={styles.modalOverlay} onPress={() => setShowEmojiModal(false)}>
-                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Emoji</Text>
-                            <TouchableOpacity onPress={() => setShowEmojiModal(false)} style={styles.modalCloseButton}>
-                                <Text style={styles.modalCloseText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView style={styles.emojiScrollView} showsVerticalScrollIndicator={false}>
-                            <View style={styles.emojiGrid}>
-                                {POPULAR_EMOJIS.map((emojiName: string) => {
-                                    const isSelected = emoji === emojiName;
-                                    return (
-                                        <TouchableOpacity
-                                            key={emojiName}
-                                            style={[styles.emojiOption, isSelected && styles.emojiOptionSelected]}
-                                            onPress={() => {
-                                                setEmoji(emojiName);
-                                                setShowEmojiModal(false);
-                                            }}
-                                        >
-                                            <Emoji name={emojiName} style={styles.emojiIcon} />
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                <BottomSheetView style={styles.emojiBottomSheetContent}>
+                    {showEmojiModal ? (
+                        <View style={styles.emojiModalContainer}>
+                            <View style={styles.emojiModalHeader}>
+                                <Text style={styles.emojiModalTitle}>Select Emoji</Text>
+                                <TouchableOpacity
+                                    onPress={handleDismissEmojiModal}
+                                    style={styles.emojiModalCloseButton}
+                                >
+                                    <Ionicons name="close" size={24} color={colors.gray[300]} />
+                                </TouchableOpacity>
                             </View>
-                        </ScrollView>
-                    </View>
-                </Pressable>
-            </Modal>
+                            <View style={[styles.emojiSelectorContainer, { height: emojiSelectorHeight }]}>
+                                <EmojiSelector
+                                    onEmojiSelected={handleEmojiSelected}
+                                    theme={colors.primary}
+                                    showTabs={true}
+                                    showSearchBar={true}
+                                    showHistory={false}
+                                    columns={8}
+                                    category={Categories.emotion}
+                                    showSectionTitles={false}
+                                />
+                            </View>
+                        </View>
+                    ) : null}
+                </BottomSheetView>
+            </BottomSheetModal>
         </KeyboardAvoidingView>
     );
 }
@@ -1158,12 +882,6 @@ const styles = StyleSheet.create({
     repeatTitle: {
         marginBottom: 0,
         lineHeight: 30,
-    },
-    hiddenEmojiInput: {
-        position: "absolute",
-        opacity: 0,
-        width: 0,
-        height: 0,
     },
     categoryRow: {
         flexDirection: "row",
@@ -1514,15 +1232,6 @@ const styles = StyleSheet.create({
         color: "white",
         fontWeight: "700",
     },
-    numberInput: {
-        backgroundColor: "white",
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 16,
-        color: colors.text.title,
-        borderWidth: 1,
-        borderColor: colors.gray[200],
-    },
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -1587,6 +1296,46 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
+    emojiBottomSheetBackground: {
+        backgroundColor: colors.gray[100],
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    emojiBottomSheetIndicator: {
+        backgroundColor: colors.gray[300],
+        width: 40,
+    },
+    emojiBottomSheetContent: {
+        flex: 1,
+        paddingHorizontal: 0,
+    },
+    emojiModalContainer: {
+        flex: 1,
+    },
+    emojiSelectorContainer: {
+        width: "100%",
+        paddingBottom: 80,
+    },
+    emojiModalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 16,
+        paddingTop: Platform.OS === "ios" ? 10 : 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.gray[200],
+    },
+    emojiModalTitle: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#000000",
+    },
+    emojiModalCloseButton: {
+        padding: 3,
+        backgroundColor: colors.gray[200],
+        borderRadius: 20,
+
+    },
     inactiveTag: {
         flexDirection: "row",
         alignItems: "center",
@@ -1632,33 +1381,6 @@ const styles = StyleSheet.create({
         color: "white",
         fontSize: 16,
         fontWeight: "600",
-    },
-    emojiScrollView: {
-        maxHeight: 400,
-    },
-    emojiGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        gap: 8,
-        padding: 8,
-    },
-    emojiOption: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        backgroundColor: colors.gray[100],
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-    emojiOptionSelected: {
-        borderColor: colors.primary,
-        backgroundColor: "#F9FAFB",
-    },
-    emojiIcon: {
-        fontSize: 28,
     },
     loadingContainer: {
         flex: 1,
@@ -1725,12 +1447,5 @@ const styles = StyleSheet.create({
         height: 2,
         backgroundColor: colors.gray[200],
         zIndex: 0,
-    },
-    dateDivider: {
-        width: 1,
-        backgroundColor: colors.gray[200],
-        marginHorizontal: 12,
-        marginTop: 32,
-        height: 52,
     },
 });

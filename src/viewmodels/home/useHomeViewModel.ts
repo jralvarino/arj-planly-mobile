@@ -364,8 +364,6 @@ export function useHomeViewModel({ todos, selectedDate }: UseHomeViewModelProps)
 
     return {
         weekSummary,
-        loadingSummary,
         handleWeekChange,
-        fetchWeekSummary,
     };
 }

@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -14,10 +14,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { TodoCard } from "../../components/TodoCard";
 import { WeekCarousel } from "../../components/WeekCarousel";
-import { TODO_STATUS } from "../../models/Todo";
 import { colors } from "../../theme/colors";
 import { getTodayDate, headerTitleComponent } from "../../utils/dateUtils";
 import { useHomeViewModel } from "../../viewmodels/home/useHomeViewModel";
+import { useHomeScreenViewModel } from "../../viewmodels/home/useHomeScreenViewModel";
 import { useTodoViewModel } from "../../viewmodels/todo/useTodoViewModel";
 
 const TAB_BAR_HEIGHT = 72;
@@ -40,11 +40,18 @@ export default function HomeScreen() {
         handleSaveNotes,
     } = useTodoViewModel();
     
-    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-    const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
+    // ViewModel para gerenciar estado da tela (filtros, datas, separadores)
+    const {
+        selectedCategoryId,
+        setSelectedCategoryId,
+        selectedDate,
+        setSelectedDate,
+        filteredTodos,
+        getItemSeparatorInfo,
+    } = useHomeScreenViewModel({ todos });
     
     // ViewModel para gerenciar weekSummary e lógica relacionada
-    const { weekSummary, loadingSummary, handleWeekChange } = useHomeViewModel({
+    const { weekSummary, handleWeekChange } = useHomeViewModel({
         todos,
         selectedDate,
     });
@@ -82,46 +89,9 @@ export default function HomeScreen() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedDate]);
 
-    // Filtra os todos baseado na categoria selecionada
-    const filteredTodos = useMemo(() => {
-        if (!selectedCategoryId) {
-            return todos;
-        }
-        return todos.filter((todo) => todo.categoryId === selectedCategoryId);
-    }, [todos, selectedCategoryId]);
-
-    // Verifica se todos os TODOS estão done ou skipped
-    const allTodosDoneOrSkipped = useMemo(() => {
-        if (filteredTodos.length === 0) return false;
-        return filteredTodos.every(
-            (todo) => todo.status === TODO_STATUS.DONE || todo.status === TODO_STATUS.SKIPPED
-        );
-    }, [filteredTodos]);
-
-    // Verifica se todos os TODOS estão done (não skipped)
-    const allTodosDone = useMemo(() => {
-        if (filteredTodos.length === 0) return false;
-        return filteredTodos.every((todo) => todo.status === TODO_STATUS.DONE);
-    }, [filteredTodos]);
-
     const renderItem = useCallback(
         ({ item, index }: { item: (typeof filteredTodos)[0]; index: number }) => {
-            // Verifica se este é o primeiro Todo com status "done"
-            const isFirstDone =
-                !allTodosDone &&
-                !allTodosDoneOrSkipped &&
-                item.status === TODO_STATUS.DONE &&
-                (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.DONE);
-
-            // Verifica se este é o primeiro Todo com status "skipped"
-            const isFirstSkipped =
-                !allTodosDone &&
-                !allTodosDoneOrSkipped &&
-                item.status === TODO_STATUS.SKIPPED &&
-                (index === 0 || filteredTodos[index - 1].status !== TODO_STATUS.SKIPPED);
-
-            // Mostra o separador "Congratulations, all done" apenas no primeiro item quando todos estão done
-            const showCongratulations = allTodosDone && index === 0;
+            const { isFirstDone, isFirstSkipped, showCongratulations } = getItemSeparatorInfo(item, index);
 
             return (
                 <>
@@ -172,15 +142,7 @@ export default function HomeScreen() {
                 </>
             );
         },
-        [
-            handleToggleTodo,
-            handleSkipTodoWithConfirmation,
-            handleSaveTodo,
-            categories,
-            filteredTodos,
-            allTodosDoneOrSkipped,
-            allTodosDone,
-        ]
+        [handleToggleTodo, handleSkipTodoWithConfirmation, handleSaveTodo, categories, filteredTodos, getItemSeparatorInfo]
     );
 
     const renderEmpty = useCallback(() => {

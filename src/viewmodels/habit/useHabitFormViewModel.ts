@@ -1,7 +1,7 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Toast from "react-native-toast-message";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
@@ -132,18 +132,15 @@ export function useHabitFormViewModel() {
 
     // Ao marcar como inativo: define end_date como hoje apenas se o usuário não informou.
     // Ao marcar como ativo: remove end_date.
-    const handleActiveChange = useCallback(
-        (value: boolean) => {
-            if (!value) {
-                setActive(false);
-                setEndDate((prev) => (prev ? prev : moment().format("YYYY-MM-DD")));
-            } else {
-                setActive(true);
-                setEndDate("");
-            }
-        },
-        []
-    );
+    const handleActiveChange = useCallback((value: boolean) => {
+        if (!value) {
+            setActive(false);
+            setEndDate((prev) => (prev ? prev : moment().format("YYYY-MM-DD")));
+        } else {
+            setActive(true);
+            setEndDate("");
+        }
+    }, []);
 
     const handleSubmit = useCallback(async () => {
         // Validation
@@ -169,8 +166,8 @@ export function useHabitFormViewModel() {
         try {
             // Se está sendo desativado, garante que end_date está definido
             // Se está sendo reativado, remove o end_date (undefined)
-            const finalEndDate = !active ? (endDate || moment().format("YYYY-MM-DD")) : undefined;
-            
+            const finalEndDate = !active ? endDate || moment().format("YYYY-MM-DD") : undefined;
+
             const habitData = {
                 title: title.trim(),
                 description: description.trim() || undefined,
@@ -247,6 +244,77 @@ export function useHabitFormViewModel() {
         router,
     ]);
 
+    // Parse periodValue to array of selected days
+    const selectedDays = useMemo(() => {
+        return periodType === "specific_days_week" && periodValue
+            ? periodValue
+                  .split(",")
+                  .map((day) => day.trim())
+                  .filter((day) => day !== "")
+            : [];
+    }, [periodType, periodValue]);
+
+    // Parse periodValue to array of selected month days
+    const selectedMonthDays = useMemo(() => {
+        return periodType === "specific_days_month" && periodValue
+            ? periodValue
+                  .split(",")
+                  .map((day) => day.trim())
+                  .filter((day) => day !== "")
+            : [];
+    }, [periodType, periodValue]);
+
+    // Generate array of month days (1-31)
+    const monthDays = useMemo(() => Array.from({ length: 31 }, (_, i) => (i + 1).toString()), []);
+
+    // Toggle day selection (for week days)
+    const toggleDay = useCallback(
+        (dayCode: string) => {
+            setPeriodValue((prevValue) => {
+                const currentDays = prevValue
+                    ? prevValue.split(",").map((day) => day.trim()).filter((day) => day !== "")
+                    : [];
+                const isSelected = currentDays.includes(dayCode);
+                if (isSelected) {
+                    return currentDays.filter((day) => day !== dayCode).join(",");
+                } else {
+                    return [...currentDays, dayCode].join(",");
+                }
+            });
+        },
+        []
+    );
+
+    // Toggle month day selection
+    const toggleMonthDay = useCallback(
+        (day: string) => {
+            setPeriodValue((prevValue) => {
+                const currentDays = prevValue
+                    ? prevValue.split(",").map((d) => d.trim()).filter((d) => d !== "")
+                    : [];
+                const isSelected = currentDays.includes(day);
+                if (isSelected) {
+                    return currentDays.filter((d) => d !== day).join(",");
+                } else {
+                    return [...currentDays, day].join(",");
+                }
+            });
+        },
+        []
+    );
+
+    // Handle period type change
+    const handlePeriodTypeChange = useCallback(
+        (type: "every_day" | "specific_days_week" | "specific_days_month") => {
+            // Clear periodValue if changing to every_day or to a different type
+            if (type === "every_day" || periodType !== type) {
+                setPeriodValue("");
+            }
+            setPeriodType(type);
+        },
+        [periodType, setPeriodType, setPeriodValue]
+    );
+
     return {
         // State
         title,
@@ -270,6 +338,11 @@ export function useHabitFormViewModel() {
         initialLoading,
         isEditMode,
 
+        // Computed values
+        selectedDays,
+        selectedMonthDays,
+        monthDays,
+
         // Actions
         setTitle,
         setDescription,
@@ -288,5 +361,8 @@ export function useHabitFormViewModel() {
         setActive,
         handleActiveChange,
         handleSubmit,
+        toggleDay,
+        toggleMonthDay,
+        handlePeriodTypeChange,
     };
 }

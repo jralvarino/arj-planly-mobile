@@ -2,7 +2,7 @@ import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
@@ -256,15 +256,7 @@ export function TodoCard({
                     >
                         <View style={styles.header}>
                             <View style={styles.emojiContainer}>
-                                {todo.emoji ? (
-                                    todo.emoji.length <= 2 ? (
-                                        <Text style={styles.emoji}>{todo.emoji}</Text>
-                                    ) : (
-                                        <Emoji name={todo.emoji} style={styles.emoji} />
-                                    )
-                                ) : (
-                                    <Text style={styles.emoji}>📷</Text>
-                                )}
+                                {<Text style={styles.emoji}>{todo.emoji}</Text>}
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={[styles.title, (isDone || isSkipped) && styles.titleDone]}>
@@ -326,17 +318,13 @@ export function TodoCard({
                                 style={[styles.checkButton, isDone && styles.checkButtonDone]}
                                 disabled={isSkipped}
                             >
-                                <Ionicons
-                                    name={
-                                        isSkipped
-                                            ? "play-forward-outline"
-                                            : isDone
-                                              ? "checkmark-circle"
-                                              : "checkmark-circle-outline"
-                                    }
-                                    size={28}
-                                    color={isSkipped ? "#FBBF24" : isDone ? "#10B981" : colors.gray[300]}
-                                />
+                                {isSkipped ? (
+                                    <Ionicons name="play-forward-outline" size={28} color="#FBBF24" />
+                                ) : isDone ? (
+                                    <Image source={require("../../assets/images/check.png")} style={styles.checkImage} />
+                                ) : (
+                                    <Ionicons name="checkmark-circle-outline" size={28} color={colors.gray[300]} />
+                                )}
                             </Pressable>
                         </View>
                         <View style={styles.details}>
@@ -424,17 +412,6 @@ const styles = StyleSheet.create({
         marginBottom: 11,
         borderLeftWidth: 4,
         position: "relative",
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 2,
-            },
-        }),
     },
     header: {
         flexDirection: "row",
@@ -516,11 +493,14 @@ const styles = StyleSheet.create({
     checkButton: {
         justifyContent: "center",
         alignItems: "center",
-        marginLeft: 8,
-        marginTop: 12,
+        marginTop: 10,
     },
     checkButtonDone: {
         // Estilo adicional quando está marcado
+    },
+    checkImage: {
+        width: 26,
+        height: 26,
     },
     notesButton: {
         backgroundColor: colors.primary,

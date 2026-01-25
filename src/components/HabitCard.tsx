@@ -2,7 +2,6 @@ import { colors } from "@/theme/colors";
 import moment from "moment";
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import Emoji from "react-native-emoji";
 import { Habit } from "../models/Habit";
 
 interface HabitCardProps {
@@ -33,11 +32,7 @@ export function HabitCard({ habit }: HabitCardProps) {
             <View style={styles.header}>
                 <View style={styles.emojiContainer}>
                     {habit.emoji ? (
-                        habit.emoji.length <= 2 ? (
-                            <Text style={styles.emoji}>{habit.emoji}</Text>
-                        ) : (
-                            <Emoji name={habit.emoji} style={styles.emoji} />
-                        )
+                        <Text style={styles.emoji}>{habit.emoji}</Text>
                     ) : (
                         <Text style={styles.emoji}>📷</Text>
                     )}
