@@ -1,6 +1,6 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
@@ -39,6 +39,7 @@ export function TodoCard({
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    const { dismissAll } = useBottomSheetModal();
     const [notesModalVisible, setNotesModalVisible] = useState(false);
     const { height: screenHeight } = useWindowDimensions();
     const snapPoints = useMemo(() => [screenHeight * 0.4], [screenHeight]);
@@ -118,9 +119,14 @@ export function TodoCard({
             });
             return;
         }
+        // Fecha todos os modais abertos antes de abrir um novo
+        dismissAll();
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
-        bottomSheetModalRef.current?.present();
+        // Pequeno delay para garantir que os outros modais foram fechados
+        setTimeout(() => {
+            bottomSheetModalRef.current?.present();
+        }, 100);
     };
 
     const handleCloseModal = useCallback(() => {
