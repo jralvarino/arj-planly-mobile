@@ -6,6 +6,7 @@ import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInpu
 import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import * as Progress from "react-native-progress";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 import { getTodayDate } from "../utils/dateUtils";
@@ -49,7 +50,7 @@ export function TodoCard({
     const opacityAnim = useRef(new Animated.Value(1)).current;
 
     const progress = todo.targetValue
-        ? (parseFloat(todo.progressValue || "0") / parseFloat(todo.targetValue)) * 100
+        ? parseFloat(todo.progressValue || "0") / parseFloat(todo.targetValue)
         : 0;
 
     const modalProgress = todo.targetValue
@@ -256,7 +257,19 @@ export function TodoCard({
                     >
                         <View style={styles.header}>
                             <View style={styles.emojiContainer}>
-                                {<Text style={styles.emoji}>{todo.emoji}</Text>}
+                                <View style={styles.circleBackground} />
+                                <Progress.Circle
+                                    progress={progress}
+                                    size={45}
+                                    thickness={1}
+                                    borderWidth={0.01}
+                                    color={"#10B981"}
+                                    unfilledColor={colors.gray[200]}
+                                    showsText={false}
+                                />
+                                <View style={styles.emojiWrapper}>
+                                    <Text style={styles.emoji}>{todo.emoji}</Text>
+                                </View>
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={[styles.title, (isDone || isSkipped) && styles.titleDone]}>
@@ -326,22 +339,6 @@ export function TodoCard({
                                     <Ionicons name="checkmark-circle-outline" size={28} color={colors.gray[300]} />
                                 )}
                             </Pressable>
-                        </View>
-                        <View style={styles.details}>
-                            {todo.targetValue !== "1" && (
-                                <View style={styles.progressContainer}>
-                                    <View style={styles.progressBarContainer}>
-                                        <View style={styles.progressBarBackground}>
-                                            <View
-                                                style={[
-                                                    styles.progressBarFill,
-                                                    { width: `${Math.min(progress, 100)}%` },
-                                                ]}
-                                            />
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
                         </View>
                     </Animated.View>
                 </Pressable>
@@ -416,13 +413,29 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 8,
     },
     emojiContainer: {
         marginRight: 12,
+        position: "relative",
+        justifyContent: "center",
+        alignItems: "center",
+        alignSelf: "center",
+    },
+    circleBackground: {
+        position: "absolute",
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
+        backgroundColor: "rgba(255, 255, 255, 0.5)",
+    },
+    emojiWrapper: {
+        position: "absolute",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1,
     },
     emoji: {
-        fontSize: 32,
+        fontSize: 26,
     },
     titleContainer: {
         flex: 1,
@@ -440,7 +453,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 4,
-        marginTop: 2,
+        marginTop: 6,//espaço entre o titulo e as tags para separar melhor
     },
     metaContainer: {
         position: "absolute",
@@ -468,39 +481,18 @@ const styles = StyleSheet.create({
         marginLeft: 3,
         marginTop: 2,
     },
-    details: {
-        gap: 6,
-    },
-    progressContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    progressBarContainer: {
-        flex: 1,
-    },
-    progressBarBackground: {
-        height: 8,
-        backgroundColor: colors.gray[200],
-        borderRadius: 4,
-        overflow: "hidden",
-    },
-    progressBarFill: {
-        height: "100%",
-        backgroundColor: "#10B981",
-        borderRadius: 4,
-    },
     checkButton: {
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 10,
+        alignSelf: "center",
+        marginRight: 4,//espaço entre o titulo e o botão de check
     },
     checkButtonDone: {
         // Estilo adicional quando está marcado
     },
     checkImage: {
-        width: 26,
-        height: 26,
+        width: 25,
+        height: 25,
     },
     notesButton: {
         backgroundColor: colors.primary,
