@@ -33,11 +33,6 @@ export function TodoModalContent({
 }: TodoModalContentProps) {
     return (
         <>
-            {isSkipped && (
-                <View style={styles.modalSkippedTag}>
-                    <Text style={styles.modalSkippedTagText}>skipped</Text>
-                </View>
-            )}
             {/* Header com Emoji e Título */}
             <View style={styles.modalHeaderContainer}>
                 <View style={styles.modalHeader}>
@@ -269,20 +264,5 @@ const styles = StyleSheet.create({
     },
     progressButtonTextDisabled: {
         color: colors.gray[200],
-    },
-    modalSkippedTag: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-        backgroundColor: "#FBBF24",
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        zIndex: 10,
-    },
-    modalSkippedTagText: {
-        color: "black",
-        fontSize: 11,
-        fontWeight: "600",
     },
 });

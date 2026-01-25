@@ -70,6 +70,9 @@ export function TodoCard({
     const isDone = localTodo.status === TODO_STATUS.DONE;
     const isSkipped = localTodo.status === TODO_STATUS.SKIPPED;
     const category = categories.find((cat) => cat.id === localTodo.categoryId);
+    
+    // Define thickness como 0 quando status é done ou targetValue é 1
+    const progressThickness = isDone || localTodo.targetValue === "1" ? 0 : 1;
 
     // Verifica se a data selecionada é futura (usa timezone local)
     const todayDate = getTodayDate();
@@ -293,10 +296,10 @@ export function TodoCard({
                                 <Progress.Circle
                                     progress={progress}
                                     size={45}
-                                    thickness={1}
+                                    thickness={progressThickness}
                                     borderWidth={0.01}
                                     color={"#10B981"}
-                                    unfilledColor={colors.gray[200]}
+                                   
                                     showsText={false}
                                 />
                                 <View style={styles.emojiWrapper}>
@@ -465,8 +468,8 @@ const styles = StyleSheet.create({
     },
     circleBackground: {
         position: "absolute",
-        width: 45,
-        height: 45,
+        width: 47,
+        height: 47,
         borderRadius: 22.5,
         backgroundColor: "rgba(255, 255, 255, 0.5)",
     },
