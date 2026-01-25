@@ -39,18 +39,18 @@ export default function HabitsListScreen() {
             <View style={styles.rightActions}>
                 <Reanimated.View style={[styles.actionContainer, animatedStyle]}>
                     <RectButton style={[styles.actionButton, styles.editButton]} onPress={() => handleEdit(habit)}>
-                        <MaterialCommunityIcons name="pencil" size={24} color="white" />
+                        <MaterialCommunityIcons name="pencil" size={24} color={colors.white} />
                         <Text style={styles.actionText}>Edit</Text>
                     </RectButton>
                     <RectButton
                         style={[styles.actionButton, styles.disableButton]}
                         onPress={() => handleDisable(habit)}
                     >
-                        <MaterialCommunityIcons name={habit.active ? "eye-off" : "eye"} size={24} color="white" />
+                        <MaterialCommunityIcons name={habit.active ? "eye-off" : "eye"} size={24} color={colors.white} />
                         <Text style={styles.actionText}>{habit.active ? "Disable" : "Enable"}</Text>
                     </RectButton>
                     <RectButton style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(habit)}>
-                        <MaterialCommunityIcons name="delete" size={24} color="white" />
+                        <MaterialCommunityIcons name="delete" size={24} color={colors.white} />
                         <Text style={styles.actionText}>Delete</Text>
                     </RectButton>
                 </Reanimated.View>
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
     },
     filterContainer: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderBottomWidth: 1,
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     filterTagTextSelected: {
-        color: "white",
+        color: colors.white,
     },
     rightActions: {
         width: 240,
@@ -248,13 +248,13 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     disableButton: {
-        backgroundColor: "#F59E0B",
+        backgroundColor: colors.warning.dark,
     },
     deleteButton: {
-        backgroundColor: "#ff4444",
+        backgroundColor: colors.error,
     },
     actionText: {
-        color: "white",
+        color: colors.white,
         fontSize: 12,
         fontWeight: "600",
         marginTop: 4,

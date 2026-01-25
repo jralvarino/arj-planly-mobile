@@ -1,5 +1,5 @@
 import { colors } from "@/theme/colors";
-import { COLORS_HABIT, WEEK_DAYS } from "@/utils/constants";
+import { WEEK_DAYS } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import BottomSheetModal, { BottomSheetView } from "@gorhom/bottom-sheet";
 import moment from "moment";
@@ -218,7 +218,7 @@ export function HabitFormScreen() {
                 {/* Inactive Warning Tag */}
                 {isEditMode && !active && (
                     <View style={styles.inactiveTag}>
-                        <Ionicons name="warning-outline" size={18} color="#F59E0B" />
+                        <Ionicons name="warning-outline" size={18} color={colors.warning.dark} />
                         <Text style={styles.inactiveTagText}>This habit is currently inactive</Text>
                     </View>
                 )}
@@ -274,7 +274,7 @@ export function HabitFormScreen() {
                     {/* Color Selector */}
                     <View style={styles.section}>
                         <View style={styles.colorRow}>
-                            {COLORS_HABIT.map((colorItem) => {
+                            {colors.habitColors.map((colorItem) => {
                                 const isSelected = color === colorItem;
                                 return (
                                     <TouchableOpacity
@@ -830,7 +830,7 @@ export function HabitFormScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FAFAFA",
+        backgroundColor: colors.gray[50],
     },
     scrollView: {
         flex: 1,
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
     },
     sectionCard: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 20,
         marginBottom: 16,
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
         borderColor: colors.gray[200],
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     categoryTagTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "600",
     },
     emptyCategoriesText: {
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     periodTypeTagTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "600",
     },
     timeTagsRow: {
@@ -971,7 +971,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     timeTagTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "600",
     },
     reminderHeader: {
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
     reminderTimeButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 12,
         padding: 16,
         borderWidth: 1,
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
         borderColor: colors.gray[200],
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.05,
                 shadowRadius: 2,
@@ -1057,7 +1057,7 @@ const styles = StyleSheet.create({
     selectedValueChipText: {
         fontSize: 10,
         fontWeight: "600",
-        color: "white",
+        color: colors.white,
     },
     goalLabelContainer: {
         flexDirection: "row",
@@ -1081,7 +1081,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     unitButton: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 12,
         padding: 16,
         borderWidth: 1,
@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.2,
                 shadowRadius: 2,
@@ -1132,14 +1132,14 @@ const styles = StyleSheet.create({
     },
     colorCheckmark: {
         fontSize: 24,
-        color: "white",
+        color: colors.white,
         fontWeight: "bold",
-        textShadowColor: "rgba(0, 0, 0, 0.3)",
+        textShadowColor: colors.textShadow,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
     },
     input: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderWidth: 2,
         borderColor: colors.gray[200],
         justifyContent: "center",
@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
         color: colors.text.body,
     },
     weekDayCircleTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "700",
     },
     monthDaysGrid: {
@@ -1229,24 +1229,24 @@ const styles = StyleSheet.create({
         color: colors.text.body,
     },
     monthDayCircleTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "700",
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: colors.overlay.black,
         justifyContent: "center",
         alignItems: "center",
     },
     modalContent: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 20,
         width: "94%",
         maxWidth: 480,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
                 shadowRadius: 8,
@@ -1292,7 +1292,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     modalSaveButtonText: {
-        color: "white",
+        color: colors.white,
         fontSize: 16,
         fontWeight: "600",
     },
@@ -1328,7 +1328,7 @@ const styles = StyleSheet.create({
     emojiModalTitle: {
         fontSize: 18,
         fontWeight: "600",
-        color: "#000000",
+        color: colors.black,
     },
     emojiModalCloseButton: {
         padding: 3,
@@ -1341,18 +1341,18 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        backgroundColor: "#FEF3C7",
+        backgroundColor: colors.warning.light,
         paddingVertical: 12,
         paddingHorizontal: 16,
         borderRadius: 12,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: "#FCD34D",
+        borderColor: colors.warning.medium,
     },
     inactiveTagText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#92400E",
+        color: colors.warning.text,
     },
     saveButton: {
         backgroundColor: colors.primary,
@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     saveButtonText: {
-        color: "white",
+        color: colors.white,
         fontSize: 16,
         fontWeight: "600",
     },
@@ -1386,7 +1386,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: colors.gray[50],
     },
     loadingText: {
         marginTop: 16,
@@ -1419,7 +1419,7 @@ const styles = StyleSheet.create({
     dateButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 8,
         padding: 8,
         borderWidth: 1,

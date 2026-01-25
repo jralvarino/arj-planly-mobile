@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     },
     backdrop: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0,0,0,0.4)",
+        backgroundColor: colors.overlay.backdrop,
     },
     drawer: {
         flex: 0,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     retryButtonText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#fff",
+        color: colors.white,
     },
     userSection: {
         alignItems: "center",
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     avatarPlaceholderText: {
         fontSize: 32,
         fontWeight: "700",
-        color: "#fff",
+        color: colors.white,
     },
     name: {
         fontSize: 18,

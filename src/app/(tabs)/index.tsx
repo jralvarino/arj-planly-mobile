@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     retryButtonText: {
-        color: "white",
+        color: colors.white,
         fontSize: 14,
         fontWeight: "600",
     },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        backgroundColor: colors.overlay.white90,
         justifyContent: "center",
         alignItems: "center",
         zIndex: 1000,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
         fontSize: 16,
         fontWeight: "700",
-        color: "#10B981",
+        color: colors.success,
     },
     headerTitleContainer: {
         backgroundColor: colors.primary,
@@ -363,6 +363,6 @@ const styles = StyleSheet.create({
     headerTitleText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "white",
+        color: colors.white,
     },
 });

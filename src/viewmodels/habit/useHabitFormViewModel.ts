@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
 import { useCallback, useMemo, useState } from "react";
 import Toast from "react-native-toast-message";
+import { colors } from "../../theme/colors";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
 import { createHabit, getHabitById, updateHabit } from "../../service/habit.service";
@@ -14,7 +15,7 @@ export function useHabitFormViewModel() {
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [color, setColor] = useState("#59008c");
+    const [color, setColor] = useState(colors.habitDefault);
     const [emoji, setEmoji] = useState("");
     const [unit, setUnit] = useState<"count" | "pg" | "km" | "ml">("count");
     const [value, setValue] = useState("1");
@@ -60,7 +61,7 @@ export function useHabitFormViewModel() {
     const resetForm = useCallback(() => {
         setTitle("");
         setDescription("");
-        setColor("#59008c");
+        setColor(colors.habitDefault);
         setEmoji("");
         setUnit("count");
         setValue("1");

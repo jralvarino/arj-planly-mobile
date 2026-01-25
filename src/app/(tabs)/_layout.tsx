@@ -25,7 +25,7 @@ export default function TabsLayout() {
                     headerShadowVisible: false,
                     headerLeft: () => (
                         <Pressable onPress={() => setBurgerOpen(true)} hitSlop={12} style={styles.burgerButton}>
-                            <Ionicons name="menu" size={24} color={colors.text.title} />
+                            <Ionicons name="menu" size={24} color={colors.primary} />
                         </Pressable>
                     ),
                 }}
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         right: 16,
         height: 72,
         elevation: 0,
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
@@ -166,6 +166,6 @@ const styles = StyleSheet.create({
     headerTitleText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "white",
+        color: colors.white,
     },
 });

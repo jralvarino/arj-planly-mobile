@@ -68,7 +68,7 @@ export function HabitCard({ habit }: HabitCardProps) {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
         position: "relative",
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -114,18 +114,18 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 8,
         right: 8,
-        backgroundColor: "#FEF3C7",
+        backgroundColor: colors.warning.light,
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: "#FCD34D",
+        borderColor: colors.warning.medium,
         zIndex: 10,
     },
     inactiveText: {
         fontSize: 10,
         fontWeight: "600",
-        color: "#92400E",
+        color: colors.warning.text,
     },
     details: {
         gap: 6,

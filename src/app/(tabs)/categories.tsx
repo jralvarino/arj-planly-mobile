@@ -40,7 +40,7 @@ export default function CategoriesScreen() {
                             handleEdit(category);
                         }}
                     >
-                        <MaterialCommunityIcons name="pencil" size={24} color="white" />
+                        <MaterialCommunityIcons name="pencil" size={24} color={colors.white} />
                         <Text style={styles.actionText}>Edit</Text>
                     </RectButton>
                     <RectButton
@@ -50,7 +50,7 @@ export default function CategoriesScreen() {
                             handleDelete(category);
                         }}
                     >
-                        <MaterialCommunityIcons name="delete" size={24} color="white" />
+                        <MaterialCommunityIcons name="delete" size={24} color={colors.white} />
                         <Text style={styles.actionText}>Delete</Text>
                     </RectButton>
                 </Reanimated.View>
@@ -186,10 +186,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     deleteButton: {
-        backgroundColor: "#ff4444",
+        backgroundColor: colors.error,
     },
     actionText: {
-        color: "white",
+        color: colors.white,
         fontSize: 12,
         fontWeight: "600",
         marginTop: 4,

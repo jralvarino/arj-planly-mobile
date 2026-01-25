@@ -190,19 +190,19 @@ export function DatePicker({ visible, value, onClose, onConfirm }: DatePickerPro
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: colors.overlay.black,
         justifyContent: "center",
         alignItems: "center",
     },
     modalContent: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 20,
         width: "90%",
         maxWidth: 500,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
                 shadowRadius: 8,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     dateOptionTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "600",
     },
     modalSaveButton: {
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     modalSaveButtonText: {
-        color: "white",
+        color: colors.white,
         fontSize: 16,
         fontWeight: "600",
     },

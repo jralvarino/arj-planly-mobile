@@ -91,6 +91,6 @@ const styles = StyleSheet.create({
         color: "gray",
     },
     filterButtonTextActive: {
-        color: "#fff",
+        color: colors.white,
     },
 });

@@ -264,14 +264,14 @@ export function TodoCard({
         return (
             <View style={styles.rightAction}>
                 <Pressable style={styles.notesButton} onPress={handleOpenNotesModal}>
-                    <Ionicons name="document-text-outline" size={24} color="#fff" />
+                    <Ionicons name="document-text-outline" size={24} color={colors.white} />
                     <Text style={styles.notesButtonText}>Notes</Text>
                 </Pressable>
                 <Pressable style={styles.skipButton} onPress={handleSkip}>
                     <Ionicons
                         name={isSkippedStatus ? "play-back-outline" : "play-forward-outline"}
                         size={24}
-                        color="#000"
+                        color={colors.black}
                     />
                     <Text style={styles.skipButtonText}>{isSkippedStatus ? "Undo" : "Skip"}</Text>
                 </Pressable>
@@ -302,7 +302,7 @@ export function TodoCard({
                                     size={45}
                                     thickness={progressThickness}
                                     borderWidth={0.01}
-                                    color={"#10B981"}
+                                    color={colors.success}
                                    
                                     showsText={false}
                                 />
@@ -371,7 +371,7 @@ export function TodoCard({
                                 disabled={isSkipped}
                             >
                                 {isSkipped ? (
-                                    <Ionicons name="play-forward-outline" size={28} color="#FBBF24" />
+                                    <Ionicons name="play-forward-outline" size={28} color={colors.warning.base} />
                                 ) : isDone ? (
                                     <Image source={require("../../assets/images/check.png")} style={styles.checkImage} />
                                 ) : (
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
         width: 47,
         height: 47,
         borderRadius: 22.5,
-        backgroundColor: "rgba(255, 255, 255, 0.5)",
+        backgroundColor: colors.overlay.white,
     },
     emojiWrapper: {
         position: "absolute",
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     notesButtonText: {
-        color: "#fff",
+        color: colors.white,
         fontSize: 14,
         fontWeight: "600",
         marginTop: 4,
@@ -582,26 +582,26 @@ const styles = StyleSheet.create({
         overflow: "hidden",
     },
     skipButton: {
-        backgroundColor: "#FBBF24",
+        backgroundColor: colors.warning.base,
         justifyContent: "center",
         alignItems: "center",
         width: 100,
         paddingHorizontal: 16,
     },
     skipButtonText: {
-        color: "#000",
+        color: colors.black,
         fontSize: 14,
         fontWeight: "600",
         marginTop: 4,
     },
     skippedTag: {
-        backgroundColor: "#FBBF24",
+        backgroundColor: colors.warning.base,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 7,
     },
     skippedTagText: {
-        color: "#000",
+        color: colors.black,
         fontSize: 11,
         fontWeight: "600",
     },

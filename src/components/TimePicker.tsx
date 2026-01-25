@@ -122,19 +122,19 @@ export function TimePicker({ visible, value, onClose, onConfirm }: TimePickerPro
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: colors.overlay.black,
         justifyContent: "center",
         alignItems: "center",
     },
     modalContent: {
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 16,
         padding: 20,
         width: "85%",
         maxWidth: 400,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.25,
                 shadowRadius: 8,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
     },
     timeOptionTextSelected: {
-        color: "white",
+        color: colors.white,
         fontWeight: "600",
     },
     timeSeparator: {
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     modalSaveButtonText: {
-        color: "white",
+        color: colors.white,
         fontSize: 16,
         fontWeight: "600",
     },

@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "white",
+        backgroundColor: colors.white,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: colors.gray[200],
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
         marginTop: 8,
         ...Platform.select({
             ios: {
-                shadowColor: "#000",
+                shadowColor: colors.shadow,
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
@@ -146,6 +146,6 @@ const styles = StyleSheet.create({
     submitButtonText: {
         fontSize: 16,
         fontWeight: "700",
-        color: "white",
+        color: colors.white,
     },
 });

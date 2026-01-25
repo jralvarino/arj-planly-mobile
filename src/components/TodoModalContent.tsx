@@ -96,7 +96,7 @@ export function TodoModalContent({
                                     cx="60"
                                     cy="60"
                                     r="54"
-                                    stroke="#10B981"
+                                    stroke={colors.success}
                                     strokeWidth="12"
                                     fill="none"
                                     strokeDasharray={`${2 * Math.PI * 54}`}
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     progressButtonText: {
         fontSize: 24,
         fontWeight: "700",
-        color: "#fff",
+        color: colors.white,
     },
     progressButtonDisabled: {
         backgroundColor: colors.gray[300],
