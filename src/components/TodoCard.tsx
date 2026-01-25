@@ -1,8 +1,8 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetTextInput, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
 import { Swipeable } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
@@ -39,10 +39,11 @@ export function TodoCard({
 }: TodoCardProps) {
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    const notesBottomSheetModalRef = useRef<BottomSheetModal>(null);
     const { dismissAll } = useBottomSheetModal();
-    const [notesModalVisible, setNotesModalVisible] = useState(false);
     const { height: screenHeight } = useWindowDimensions();
     const snapPoints = useMemo(() => [screenHeight * 0.4], [screenHeight]);
+    const notesSnapPoints = useMemo(() => [screenHeight * 0.5], [screenHeight]);
     const [modalStatus, setModalStatus] = useState<TodoStatus>(todo.status);
     const [modalProgressValue, setModalProgressValue] = useState(todo.progressValue);
     const [modalNotes, setModalNotes] = useState(todo.notes || "");
@@ -239,18 +240,21 @@ export function TodoCard({
             return;
         }
         setModalNotes(localTodo.notes || "");
-        setNotesModalVisible(true);
+        dismissAll();
+        setTimeout(() => {
+            notesBottomSheetModalRef.current?.present();
+        }, 100);
         swipeableRef.current?.close();
     };
 
     const handleCloseNotesModal = useCallback(() => {
-        setNotesModalVisible(false);
+        notesBottomSheetModalRef.current?.dismiss();
         setModalNotes(localTodo.notes || "");
     }, [localTodo.notes]);
 
     const handleSaveNotes = () => {
         onSaveNotes?.(localTodo.id, modalNotes, selectedDate);
-        setNotesModalVisible(false);
+        notesBottomSheetModalRef.current?.dismiss();
         // Atualiza o estado local com as novas notas
         setLocalTodo({ ...localTodo, notes: modalNotes });
     };
@@ -412,36 +416,53 @@ export function TodoCard({
                 </BottomSheetView>
             </BottomSheetModal>
 
-            <Modal
-                visible={notesModalVisible}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={handleCloseNotesModal}
+            <BottomSheetModal
+                ref={notesBottomSheetModalRef}
+                snapPoints={notesSnapPoints}
+                enablePanDownToClose={true}
+                enableContentPanningGesture={false}
+                android_keyboardInputMode="adjustResize"
+                backgroundStyle={styles.bottomSheetBackground}
+                handleIndicatorStyle={styles.bottomSheetIndicator}
+                onDismiss={handleCloseNotesModal}
+                backdropComponent={(props) => (
+                    <BottomSheetBackdrop
+                        {...props}
+                        disappearsOnIndex={-1}
+                        appearsOnIndex={0}
+                        onPress={handleCloseNotesModal}
+                    />
+                )}
             >
-                <View style={styles.notesModalContainer}>
-                    <View style={styles.notesModalHeader}>
-                        <Pressable onPress={handleCloseNotesModal} style={styles.notesModalCloseButton}>
-                            <Text style={styles.notesModalCloseText}>Cancel</Text>
-                        </Pressable>
-                        <Text style={styles.notesModalTitle}>Notes</Text>
-                        <Pressable onPress={handleSaveNotes} style={styles.notesModalSaveButton}>
-                            <Text style={styles.notesModalSaveText}>Save</Text>
-                        </Pressable>
-                    </View>
-                    <View style={styles.notesModalBody}>
-                        <TextInput
-                            style={styles.notesInput}
-                            value={modalNotes}
-                            onChangeText={setModalNotes}
-                            placeholder="Add your notes here..."
-                            placeholderTextColor={colors.text.body}
-                            multiline
-                            textAlignVertical="top"
-                            autoFocus
-                        />
-                    </View>
-                </View>
-            </Modal>
+                <BottomSheetView style={styles.modalContent}>
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === "ios" ? "padding" : "height"}
+                        style={styles.notesModalKeyboardAvoid}
+                    >
+                        <View style={styles.notesModalHeader}>
+                            <Pressable onPress={handleCloseNotesModal} style={styles.notesModalCloseButton}>
+                                <Text style={styles.notesModalCloseText}>Cancel</Text>
+                            </Pressable>
+                            <Text style={styles.notesModalTitle}>Notes</Text>
+                            <Pressable onPress={handleSaveNotes} style={styles.notesModalSaveButton}>
+                                <Text style={styles.notesModalSaveText}>Save</Text>
+                            </Pressable>
+                        </View>
+                        <View style={styles.notesModalBody}>
+                            <BottomSheetTextInput
+                                style={styles.notesInput}
+                                value={modalNotes}
+                                onChangeText={setModalNotes}
+                                placeholder="Add your notes here..."
+                                placeholderTextColor={colors.text.body}
+                                multiline
+                                textAlignVertical="top"
+                                autoFocus
+                            />
+                        </View>
+                    </KeyboardAvoidingView>
+                </BottomSheetView>
+            </BottomSheetModal>
         </>
     );
 }
@@ -607,16 +628,15 @@ const styles = StyleSheet.create({
         width: 40,
         height: 4,
     },
-    notesModalContainer: {
+    notesModalKeyboardAvoid: {
         flex: 1,
-        backgroundColor: colors.background,
     },
     notesModalHeader: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         padding: 16,
-        paddingTop: Platform.OS === "ios" ? 60 : 16,
+        paddingTop: 8,
         borderBottomWidth: 1,
         borderBottomColor: colors.gray[200],
     },
