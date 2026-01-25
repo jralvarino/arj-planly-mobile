@@ -1,4 +1,5 @@
 import { colors } from "@/theme/colors";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Emoji from "react-native-emoji";
@@ -16,6 +17,7 @@ interface TodoModalContentProps {
     onDecrement: () => void;
     onIncrement: () => void;
     modalProgress: number;
+    onClose?: () => void;
 }
 
 export function TodoModalContent({
@@ -27,6 +29,7 @@ export function TodoModalContent({
     onDecrement,
     onIncrement,
     modalProgress,
+    onClose,
 }: TodoModalContentProps) {
     return (
         <>
@@ -39,17 +42,25 @@ export function TodoModalContent({
             <View style={styles.modalHeaderContainer}>
                 <View style={styles.modalHeader}>
                     <View style={styles.modalEmojiContainer}>
-                        {todo.emoji ? (
-                            todo.emoji.length <= 2 ? (
-                                <Text style={styles.modalEmoji}>{todo.emoji}</Text>
+                        <View style={styles.modalEmojiBackground} />
+                        <View style={styles.modalEmojiWrapper}>
+                            {todo.emoji ? (
+                                todo.emoji.length <= 2 ? (
+                                    <Text style={styles.modalEmoji}>{todo.emoji}</Text>
+                                ) : (
+                                    <Emoji name={todo.emoji} style={styles.modalEmoji} />
+                                )
                             ) : (
-                                <Emoji name={todo.emoji} style={styles.modalEmoji} />
-                            )
-                        ) : (
-                            <Text style={styles.modalEmoji}>📷</Text>
-                        )}
+                                <Text style={styles.modalEmoji}>📷</Text>
+                            )}
+                        </View>
                     </View>
                     <Text style={styles.modalTitle}>{todo.title}</Text>
+                    {onClose && (
+                        <Pressable onPress={onClose} style={styles.closeButton}>
+                            <Ionicons name="close" size={18} color="grey" />
+                        </Pressable>
+                    )}
                 </View>
             </View>
 
@@ -136,35 +147,63 @@ export function TodoModalContent({
 const styles = StyleSheet.create({
     modalHeaderContainer: {
         padding: 0,
-        paddingLeft: 12,
-        paddingBottom: 9,
+        paddingLeft: 20,
+        paddingRight: 12,
+        paddingBottom: 0,
+        paddingTop: 7,
         borderBottomWidth: 1,
-        borderBottomColor: colors.gray[200],
+        borderBottomColor: colors.gray[100],
+        position: "relative",
     },
     modalHeader: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
     },
+    closeButton: {
+        position: "absolute",
+        right: 10,
+        top: 0,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.gray[200],
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10,
+    },
     modalEmojiContainer: {
         justifyContent: "center",
         alignItems: "center",
+        position: "relative",
+    },
+    modalEmojiBackground: {
+        position: "absolute",
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
+        backgroundColor: colors.gray[200],
+    },
+    modalEmojiWrapper: {
+        position: "relative",
+        zIndex: 1,
     },
     modalEmoji: {
-        fontSize: 32,
+        fontSize: 26,
     },
     modalTitle: {
         flex: 1,
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
+        paddingRight: 40,
     },
     modalBody: {
         padding: 16,
-        paddingTop: 12,
+        paddingTop: 0,
     },
     modalProgressContainer: {
-        marginBottom: 10,
+        marginBottom: 30,
     },
     circularProgressContainer: {
         flexDirection: "row",

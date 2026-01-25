@@ -31,11 +31,7 @@ export function HabitCard({ habit }: HabitCardProps) {
             )}
             <View style={styles.header}>
                 <View style={styles.emojiContainer}>
-                    {habit.emoji ? (
-                        <Text style={styles.emoji}>{habit.emoji}</Text>
-                    ) : (
-                        <Text style={styles.emoji}>📷</Text>
-                    )}
+                    {<Text style={styles.emoji}>{habit.emoji}</Text>}
                 </View>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title}>{habit.title}</Text>

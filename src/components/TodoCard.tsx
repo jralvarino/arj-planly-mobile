@@ -364,6 +364,7 @@ export function TodoCard({
                         onDecrement={handleDecrementProgress}
                         onIncrement={handleIncrementProgress}
                         modalProgress={modalProgress}
+                        onClose={handleCloseModal}
                     />
                 </BottomSheetView>
             </BottomSheetModal>
@@ -405,7 +406,8 @@ export function TodoCard({
 const styles = StyleSheet.create({
     card: {
         borderRadius: 12,
-        padding: 9,
+        paddingVertical: 10,
+        paddingHorizontal: 9,
         marginBottom: 11,
         borderLeftWidth: 4,
         position: "relative",
