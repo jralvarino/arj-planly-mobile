@@ -1,6 +1,6 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import Emoji from "react-native-emoji";
@@ -46,21 +46,30 @@ export function TodoCard({
     const [modalStatus, setModalStatus] = useState<TodoStatus>(todo.status);
     const [modalProgressValue, setModalProgressValue] = useState(todo.progressValue);
     const [modalNotes, setModalNotes] = useState(todo.notes || "");
+    // Estado local do todo para atualizar a UI imediatamente
+    const [localTodo, setLocalTodo] = useState(todo);
     const prevStatusRef = useRef<TodoStatus>(todo.status);
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(1)).current;
 
-    const progress = todo.targetValue
-        ? parseFloat(todo.progressValue || "0") / parseFloat(todo.targetValue)
+    // Atualiza o estado local quando o todo prop muda
+    useEffect(() => {
+        setLocalTodo(todo);
+        setModalStatus(todo.status);
+        setModalProgressValue(todo.progressValue);
+    }, [todo.id, todo.status, todo.progressValue]);
+
+    const progress = localTodo.targetValue
+        ? parseFloat(localTodo.progressValue || "0") / parseFloat(localTodo.targetValue)
         : 0;
 
-    const modalProgress = todo.targetValue
-        ? (parseFloat(modalProgressValue || "0") / parseFloat(todo.targetValue)) * 100
+    const modalProgress = localTodo.targetValue
+        ? (parseFloat(modalProgressValue || "0") / parseFloat(localTodo.targetValue)) * 100
         : 0;
 
-    const isDone = todo.status === TODO_STATUS.DONE;
-    const isSkipped = todo.status === TODO_STATUS.SKIPPED;
-    const category = categories.find((cat) => cat.id === todo.categoryId);
+    const isDone = localTodo.status === TODO_STATUS.DONE;
+    const isSkipped = localTodo.status === TODO_STATUS.SKIPPED;
+    const category = categories.find((cat) => cat.id === localTodo.categoryId);
 
     // Verifica se a data selecionada é futura (usa timezone local)
     const todayDate = getTodayDate();
@@ -68,12 +77,12 @@ export function TodoCard({
     const isFutureDate = normalizedSelectedDate > todayDate;
 
     // Usa a cor original do todo
-    const cardColor = todo.color;
+    const cardColor = localTodo.color;
 
     // Anima quando o status muda para DONE
     useEffect(() => {
         const prevStatus = prevStatusRef.current;
-        const currentStatus = todo.status;
+        const currentStatus = localTodo.status;
 
         // Se mudou de não-DONE para DONE, anima o card
         if (prevStatus !== TODO_STATUS.DONE && currentStatus === TODO_STATUS.DONE) {
@@ -108,7 +117,7 @@ export function TodoCard({
 
         // Atualiza o status anterior
         prevStatusRef.current = currentStatus;
-    }, [todo.status, scaleAnim, opacityAnim]);
+    }, [localTodo.status, scaleAnim, opacityAnim]);
 
     const handleOpenModal = () => {
         if (isFutureDate) {
@@ -130,11 +139,22 @@ export function TodoCard({
     };
 
     const handleCloseModal = useCallback(() => {
+        // Verifica se houve alterações antes de fechar (compara com valores originais do prop)
+        const hasStatusChanged = modalStatus !== todo.status;
+        const hasProgressChanged = modalProgressValue !== todo.progressValue;
+        
+        if (hasStatusChanged || hasProgressChanged) {
+            // Salva as alterações no backend
+            onSave?.(todo.id, modalStatus, modalProgressValue, selectedDate);
+            // Atualiza o estado local com os novos valores do modal (não reseta)
+            setLocalTodo({ ...localTodo, status: modalStatus, progressValue: modalProgressValue });
+        }
+        
         bottomSheetModalRef.current?.dismiss();
-        // Reset to original values
+        // Reset modal state to original values from prop (para o próximo uso do modal)
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
-    }, [todo.status, todo.progressValue]);
+    }, [todo.status, todo.progressValue, todo.id, modalStatus, modalProgressValue, localTodo, selectedDate, onSave]);
 
     const handleDecrementProgress = () => {
         if (isFutureDate) {
@@ -150,17 +170,20 @@ export function TodoCard({
         let newStatus = modalStatus;
 
         // Se estava done mas não está mais no máximo, volta para pending e reseta progressValue
-        if (modalStatus === TODO_STATUS.DONE && newValue !== todo.targetValue) {
+        if (modalStatus === TODO_STATUS.DONE && newValue !== localTodo.targetValue) {
             newStatus = TODO_STATUS.PENDING;
             const finalValue = "0";
             setModalProgressValue(finalValue);
             setModalStatus(newStatus);
-            onSave?.(todo.id, newStatus, finalValue, selectedDate);
+            // Atualiza o estado local do todo
+            setLocalTodo({ ...localTodo, status: newStatus, progressValue: finalValue });
             return;
         }
 
         setModalProgressValue(newValue);
-        onSave?.(todo.id, newStatus, newValue, selectedDate);
+        setModalStatus(newStatus);
+        // Atualiza o estado local do todo
+        setLocalTodo({ ...localTodo, status: newStatus, progressValue: newValue });
     };
 
     const handleIncrementProgress = () => {
@@ -173,18 +196,19 @@ export function TodoCard({
             return;
         }
         const numValue = parseFloat(modalProgressValue) || 0;
-        const maxValue = parseFloat(todo.targetValue) || 1;
+        const maxValue = parseFloat(localTodo.targetValue) || 1;
         const newValue = Math.min(maxValue, numValue + 1).toString();
         let newStatus = modalStatus;
 
         // Se atingir o valor máximo, define status como done
-        if (newValue === todo.targetValue) {
+        if (newValue === localTodo.targetValue) {
             newStatus = TODO_STATUS.DONE;
         }
 
         setModalProgressValue(newValue);
         setModalStatus(newStatus);
-        onSave?.(todo.id, newStatus, newValue, selectedDate);
+        // Atualiza o estado local do todo
+        setLocalTodo({ ...localTodo, status: newStatus, progressValue: newValue });
     };
 
     const handleSkip = () => {
@@ -197,7 +221,7 @@ export function TodoCard({
             swipeableRef.current?.close();
             return;
         }
-        onSkip?.(todo.id, todo.title, todo.status, todo.progressValue, selectedDate);
+        onSkip?.(localTodo.id, localTodo.title, localTodo.status, localTodo.progressValue, selectedDate);
         swipeableRef.current?.close();
     };
 
@@ -211,23 +235,25 @@ export function TodoCard({
             swipeableRef.current?.close();
             return;
         }
-        setModalNotes(todo.notes || "");
+        setModalNotes(localTodo.notes || "");
         setNotesModalVisible(true);
         swipeableRef.current?.close();
     };
 
     const handleCloseNotesModal = useCallback(() => {
         setNotesModalVisible(false);
-        setModalNotes(todo.notes || "");
-    }, [todo.notes]);
+        setModalNotes(localTodo.notes || "");
+    }, [localTodo.notes]);
 
     const handleSaveNotes = () => {
-        onSaveNotes?.(todo.id, modalNotes, selectedDate);
+        onSaveNotes?.(localTodo.id, modalNotes, selectedDate);
         setNotesModalVisible(false);
+        // Atualiza o estado local com as novas notas
+        setLocalTodo({ ...localTodo, notes: modalNotes });
     };
 
     const renderRightActions = () => {
-        const isSkippedStatus = todo.status === TODO_STATUS.SKIPPED;
+        const isSkippedStatus = localTodo.status === TODO_STATUS.SKIPPED;
         return (
             <View style={styles.rightAction}>
                 <Pressable style={styles.notesButton} onPress={handleOpenNotesModal}>
@@ -274,18 +300,18 @@ export function TodoCard({
                                     showsText={false}
                                 />
                                 <View style={styles.emojiWrapper}>
-                                    <Text style={styles.emoji}>{todo.emoji}</Text>
+                                    <Text style={styles.emoji}>{localTodo.emoji}</Text>
                                 </View>
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={[styles.title, (isDone || isSkipped) && styles.titleDone]}>
-                                    {todo.title}
+                                    {localTodo.title}
                                 </Text>
                                 <View style={styles.tagsContainer}>
                                     <View style={styles.tag}>
                                         <Text style={styles.tagText}>
-                                            {todo.progressValue} / {todo.targetValue}
-                                            {todo.unit !== "count" ? ` ${todo.unit}` : ""}
+                                            {localTodo.progressValue} / {localTodo.targetValue}
+                                            {localTodo.unit !== "count" ? ` ${localTodo.unit}` : ""}
                                         </Text>
                                     </View>
                                     {category && (
@@ -293,9 +319,9 @@ export function TodoCard({
                                             <Text style={styles.tagText}>{category.name}</Text>
                                         </View>
                                     )}
-                                    {todo.period && (
+                                    {localTodo.period && (
                                         <View style={styles.tag}>
-                                            <Text style={styles.tagText}>{todo.period}</Text>
+                                            <Text style={styles.tagText}>{localTodo.period}</Text>
                                         </View>
                                     )}
                                     {isSkipped && (
@@ -303,12 +329,12 @@ export function TodoCard({
                                             <Text style={styles.skippedTagText}>skipped</Text>
                                         </View>
                                     )}
-                                    {!todo.active && (
+                                    {!localTodo.active && (
                                         <View style={styles.inactiveTag}>
                                             <Text style={styles.inactiveTagText}>Inactive</Text>
                                         </View>
                                     )}
-                                    {todo.notes && todo.notes.trim() !== "" && (
+                                    {localTodo.notes && localTodo.notes.trim() !== "" && (
                                         <View style={styles.notesIconContainer}>
                                             <Ionicons
                                                 name="chatbox-ellipses-outline"
@@ -332,7 +358,7 @@ export function TodoCard({
                                     if (isSkipped) {
                                         return;
                                     }
-                                    onToggle?.(todo.id, todo.status, todo.progressValue, selectedDate);
+                                    onToggle?.(localTodo.id, localTodo.status, localTodo.progressValue, selectedDate);
                                 }}
                                 style={[styles.checkButton, isDone && styles.checkButtonDone]}
                                 disabled={isSkipped}
@@ -357,6 +383,14 @@ export function TodoCard({
                 backgroundStyle={styles.bottomSheetBackground}
                 handleIndicatorStyle={styles.bottomSheetIndicator}
                 onDismiss={handleCloseModal}
+                backdropComponent={(props) => (
+                    <BottomSheetBackdrop
+                        {...props}
+                        disappearsOnIndex={-1}
+                        appearsOnIndex={0}
+                        onPress={handleCloseModal}
+                    />
+                )}
             >
                 <BottomSheetView style={styles.modalContent}>
                     <TodoModalContent
