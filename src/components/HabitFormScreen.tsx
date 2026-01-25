@@ -33,8 +33,6 @@ const UNIT_OPTIONS: Array<{ code: "count" | "pg" | "km" | "ml"; label: string }>
 ];
 
 export function HabitFormScreen() {
-    const [showWeekDaysModal, setShowWeekDaysModal] = useState(false);
-    const [showMonthDaysModal, setShowMonthDaysModal] = useState(false);
     const [showUnitModal, setShowUnitModal] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -126,18 +124,6 @@ export function HabitFormScreen() {
         }
     }, []);
 
-    // Handle period type change - open modal if specific_days_week or specific_days_month
-    const handlePeriodTypeChangeWithModal = useCallback(
-        (type: "every_day" | "specific_days_week" | "specific_days_month") => {
-            handlePeriodTypeChange(type);
-            if (type === "specific_days_week") {
-                setShowWeekDaysModal(true);
-            } else if (type === "specific_days_month") {
-                setShowMonthDaysModal(true);
-            }
-        },
-        [handlePeriodTypeChange]
-    );
 
     // Memoized handlers for better performance
     const handleSetPeriod = useCallback(
@@ -255,7 +241,6 @@ export function HabitFormScreen() {
 
                     {/* Description Input */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Description</Text>
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             placeholder="Add a description (optional)"
@@ -297,10 +282,10 @@ export function HabitFormScreen() {
                 </View>
 
                 {/* Category Card */}
-                <View style={styles.sectionCard}>
-                    <View style={styles.section}>
+                <View style={[styles.sectionCard, styles.categoryCard]}>
+                    <View style={[styles.section, styles.categorySection]}>
                         <View style={styles.goalLabelContainer}>
-                            <Text style={[styles.sectionTitle, styles.repeatTitle]}>Category</Text>
+                            <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Category</Text>
                         </View>
                         {categories.length > 0 ? (
                             <View style={styles.categoryRow}>
@@ -333,20 +318,14 @@ export function HabitFormScreen() {
                 </View>
 
                 {/* Period Type Card */}
-                <View style={styles.sectionCard}>
-                    <View style={styles.section}>
+                <View style={[styles.sectionCard, styles.frequencyCard]}>
+                    <View style={[styles.section, styles.frequencySection]}>
                         <View style={styles.goalLabelContainer}>
-                            <Text style={[styles.sectionTitle, styles.repeatTitle]}>Repeat</Text>
+                            <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Frequency</Text>
                         </View>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.periodTypeScrollContainer}
-                            keyboardShouldPersistTaps="handled"
-                            removeClippedSubviews={true}
-                        >
+                        <View style={styles.periodTypeScrollContainer}>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChangeWithModal("every_day")}
+                                onPress={() => handlePeriodTypeChange("every_day")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "every_day" && styles.periodTypeTagSelected,
@@ -363,7 +342,7 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChangeWithModal("specific_days_week")}
+                                onPress={() => handlePeriodTypeChange("specific_days_week")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "specific_days_week" && styles.periodTypeTagSelected,
@@ -380,7 +359,7 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChangeWithModal("specific_days_month")}
+                                onPress={() => handlePeriodTypeChange("specific_days_month")}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === "specific_days_month" && styles.periodTypeTagSelected,
@@ -396,22 +375,57 @@ export function HabitFormScreen() {
                                     Monthly
                                 </Text>
                             </TouchableOpacity>
-                        </ScrollView>
-                        {(periodType === "specific_days_week" || periodType === "specific_days_month") &&
-                            periodValue && (
-                                <View style={styles.selectedValuesContainer}>
-                                    <View style={styles.selectedValuesChipsContainer}>
-                                        {periodValue
-                                            .split(",")
-                                            .filter((day) => day.trim() !== "")
-                                            .map((day, index) => (
-                                                <View key={`${day}-${index}`} style={styles.selectedValueChip}>
-                                                    <Text style={styles.selectedValueChipText}>{day.trim()}</Text>
-                                                </View>
-                                            ))}
-                                    </View>
-                                </View>
-                            )}
+                        </View>
+                        {periodType === "specific_days_week" && (
+                            <View style={[styles.weekDaysRow, { marginTop: 12 }]}>
+                                {WEEK_DAYS.map((day) => {
+                                    const isSelected = selectedDays.some(
+                                        (selectedDay) => selectedDay.trim().toUpperCase() === day.code.trim().toUpperCase()
+                                    );
+                                    return (
+                                        <TouchableOpacity
+                                            key={day.code}
+                                            onPress={() => toggleDay(day.code)}
+                                            style={[styles.weekDayCircle, isSelected && styles.weekDayCircleSelected]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.weekDayCircleText,
+                                                    isSelected && styles.weekDayCircleTextSelected,
+                                                ]}
+                                            >
+                                                {day.code}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
+                        {periodType === "specific_days_month" && (
+                            <View style={[styles.monthDaysGrid, { marginTop: 12 }]}>
+                                {monthDays.map((day) => {
+                                    const isSelected = selectedMonthDays.some(
+                                        (selectedDay) => selectedDay.trim() === day.trim()
+                                    );
+                                    return (
+                                        <TouchableOpacity
+                                            key={day}
+                                            onPress={() => toggleMonthDay(day)}
+                                            style={[styles.monthDayCircle, isSelected && styles.monthDayCircleSelected]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.monthDayCircleText,
+                                                    isSelected && styles.monthDayCircleTextSelected,
+                                                ]}
+                                            >
+                                                {day}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -451,7 +465,7 @@ export function HabitFormScreen() {
                 <View style={styles.sectionCard}>
                     <View style={styles.section}>
                         <View style={styles.goalLabelContainer}>
-                            <Text style={[styles.sectionTitle, styles.repeatTitle]}>Time</Text>
+                            <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Time</Text>
                         </View>
                         <View style={styles.timeTagsRow}>
                             <TouchableOpacity
@@ -505,7 +519,7 @@ export function HabitFormScreen() {
                     <View style={[styles.section, !reminderEnabled && styles.sectionCompact]}>
                         <View style={styles.reminderHeader}>
                             <View style={styles.goalLabelContainer}>
-                                <Text style={[styles.sectionTitle, styles.repeatTitle]}>Reminder</Text>
+                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Reminder</Text>
                             </View>
                             <Switch
                                 value={reminderEnabled}
@@ -544,7 +558,7 @@ export function HabitFormScreen() {
                     <View style={[styles.section, styles.sectionCompact]}>
                         <View style={styles.reminderHeader}>
                             <View style={styles.goalLabelContainer}>
-                                <Text style={[styles.sectionTitle, styles.repeatTitle]}>Date Range</Text>
+                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Date Range</Text>
                             </View>
                         </View>
                         <View style={styles.dateRangeContainer}>
@@ -596,7 +610,7 @@ export function HabitFormScreen() {
                     <View style={[styles.sectionCard, styles.sectionCardCompact]}>
                         <View style={[styles.section, styles.sectionCompact]}>
                             <View style={styles.statusHeader}>
-                                <Text style={[styles.sectionTitle, styles.repeatTitle]}>Status</Text>
+                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Status</Text>
                                 <Switch
                                     value={active}
                                     onValueChange={handleActiveChange}
@@ -619,102 +633,6 @@ export function HabitFormScreen() {
                     </Text>
                 </TouchableOpacity>
             </ScrollView>
-
-            {/* Week Days Selection Modal */}
-            <Modal
-                visible={showWeekDaysModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowWeekDaysModal(false)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setShowWeekDaysModal(false)}>
-                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Days of the Week</Text>
-                            <TouchableOpacity
-                                onPress={() => setShowWeekDaysModal(false)}
-                                style={styles.modalCloseButton}
-                            >
-                                <Text style={styles.modalCloseText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.weekDaysRow}>
-                            {WEEK_DAYS.map((day) => {
-                                const isSelected = selectedDays.some(
-                                    (selectedDay) => selectedDay.trim().toUpperCase() === day.code.trim().toUpperCase()
-                                );
-                                return (
-                                    <TouchableOpacity
-                                        key={day.code}
-                                        onPress={() => toggleDay(day.code)}
-                                        style={[styles.weekDayCircle, isSelected && styles.weekDayCircleSelected]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.weekDayCircleText,
-                                                isSelected && styles.weekDayCircleTextSelected,
-                                            ]}
-                                        >
-                                            {day.code}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                        <TouchableOpacity style={styles.modalSaveButton} onPress={() => setShowWeekDaysModal(false)}>
-                            <Text style={styles.modalSaveButtonText}>Done</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Pressable>
-            </Modal>
-
-            {/* Month Days Selection Modal */}
-            <Modal
-                visible={showMonthDaysModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowMonthDaysModal(false)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setShowMonthDaysModal(false)}>
-                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Days of the Month</Text>
-                            <TouchableOpacity
-                                onPress={() => setShowMonthDaysModal(false)}
-                                style={styles.modalCloseButton}
-                            >
-                                <Text style={styles.modalCloseText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.monthDaysGrid}>
-                            {monthDays.map((day) => {
-                                const isSelected = selectedMonthDays.some(
-                                    (selectedDay) => selectedDay.trim() === day.trim()
-                                );
-                                return (
-                                    <TouchableOpacity
-                                        key={day}
-                                        onPress={() => toggleMonthDay(day)}
-                                        style={[styles.monthDayCircle, isSelected && styles.monthDayCircleSelected]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.monthDayCircleText,
-                                                isSelected && styles.monthDayCircleTextSelected,
-                                            ]}
-                                        >
-                                            {day}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                        <TouchableOpacity style={styles.modalSaveButton} onPress={() => setShowMonthDaysModal(false)}>
-                            <Text style={styles.modalSaveButtonText}>Done</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Pressable>
-            </Modal>
 
             {/* Unit Selection Modal */}
             <Modal
@@ -842,7 +760,9 @@ const styles = StyleSheet.create({
     sectionCard: {
         backgroundColor: colors.white,
         borderRadius: 16,
-        padding: 20,
+        paddingTop: 12,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
         marginBottom: 16,
         borderWidth: 1,
         borderColor: colors.gray[200],
@@ -860,6 +780,20 @@ const styles = StyleSheet.create({
     },
     sectionCardCompact: {
         padding: 12,
+    },
+    categoryCard: {
+        paddingTop: 12,
+        paddingBottom: 20,
+    },
+    categorySection: {
+        marginTop: 0,
+        marginBottom: 0,
+    },
+    frequencyCard: {
+        paddingBottom: 20,
+    },
+    frequencySection: {
+        marginBottom: 0,
     },
     sectionCompact: {
         marginBottom: 0,
@@ -879,7 +813,7 @@ const styles = StyleSheet.create({
         color: colors.text.title,
         marginBottom: 12,
     },
-    repeatTitle: {
+    sectionTitleCompact: {
         marginBottom: 0,
         lineHeight: 30,
     },
@@ -922,7 +856,8 @@ const styles = StyleSheet.create({
     periodTypeScrollContainer: {
         flexDirection: "row",
         gap: 8,
-        paddingRight: 8,
+        justifyContent: "center",
+        alignItems: "center",
     },
     periodTypeTag: {
         paddingHorizontal: 12,
@@ -1105,6 +1040,8 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 12,
+        justifyContent: "center",
+        alignItems: "center",
     },
     colorOption: {
         width: 40,

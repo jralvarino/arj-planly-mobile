@@ -53,16 +53,30 @@ export const colors: Colors = {
     primaryLight: "#A6A0F7",
     habitDefault: "#59008c",
     habitColors: [
-        "#f3eafe",
-        "#D8FFFB",
-        "#d6fce9",
-        "#ffe4e6",
-        "#fff4e6",
-        "#e6f3ff",
-        "#f0e6ff",
-        "#ffe6f0",
-        "#e6ffe6",
-        "#fff9e6",
+        "#f3eafe", // Lavanda claro
+        "#D8FFFB", // Ciano claro
+        "#d6fce9", // Verde menta
+        "#ffe4e6", // Rosa claro
+        "#fff4e6", // Pêssego claro
+        "#e6f3ff", // Azul claro
+        "#f0e6ff", // Roxo claro
+        "#ffe6f0", // Rosa pálido
+        "#e6ffe6", // Verde claro
+        "#fff9e6", // Amarelo claro
+        "#e8f5e9", // Verde pastel
+        "#fce4ec", // Rosa pastel
+        "#e1f5fe", // Azul céu
+        "#fff3e0", // Laranja claro
+        "#f1f8e9", // Verde lima
+        "#ede7f6", // Roxo pastel
+        "#e0f2f1", // Turquesa claro
+        "#fff8e1", // Amarelo pastel
+        "#f3e5f5", // Lilás claro
+        "#e8eaf6", // Índigo claro
+        "#ffebee", // Rosa suave
+        "#e0f7fa", // Ciano pastel
+        "#f9fbe7", // Verde limão
+        "#fffde7", // Amarelo suave
     ],
 
     background: "#FFFFFF",

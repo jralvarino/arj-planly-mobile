@@ -320,6 +320,46 @@ import { colors } from "@/theme/colors";
 backgroundColor: colors.newColor
 ```
 
+## Padrões de UI e Espaçamento
+
+### Cards e Seções
+
+Para manter consistência visual, os cards de seção devem seguir um padrão de espaçamento específico:
+
+- **Padding vertical**: `paddingTop: 12`, `paddingBottom: 20`
+- **Padding horizontal**: `paddingHorizontal: 20` (ou `paddingLeft: 20`, `paddingRight: 20`)
+- **Margin entre cards**: `marginBottom: 16`
+
+```typescript
+// ✅ GOOD - Padrão de espaçamento de cards
+const styles = StyleSheet.create({
+    sectionCard: {
+        backgroundColor: colors.white,
+        borderRadius: 16,
+        paddingTop: 12,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        // ... outros estilos
+    },
+});
+
+// ❌ BAD - Usar padding uniforme
+const styles = StyleSheet.create({
+    sectionCard: {
+        padding: 20, // ❌ Não permite controle fino do espaçamento vertical
+        // ...
+    },
+});
+```
+
+**Regras para Cards:**
+- ✅ Usar `paddingTop: 12` para reduzir espaço no topo
+- ✅ Usar `paddingBottom: 20` para manter espaço adequado na parte inferior
+- ✅ Usar `paddingHorizontal: 20` para espaçamento lateral consistente
+- ✅ Aplicar o mesmo padrão a todos os cards de seção no mesmo componente
+- ❌ Não usar `padding: 20` quando precisar de controle diferente entre topo e bottom
+
 ## Checklist ao Criar Nova Feature
 
 - [ ] Model criado em `src/models/`
