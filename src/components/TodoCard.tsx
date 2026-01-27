@@ -1,16 +1,31 @@
 import { colors } from "@/theme/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetTextInput, BottomSheetView, useBottomSheetModal } from "@gorhom/bottom-sheet";
+import {
+    BottomSheetBackdrop,
+    BottomSheetModal,
+    BottomSheetTextInput,
+    BottomSheetView,
+    useBottomSheetModal,
+} from "@gorhom/bottom-sheet";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Image, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
-import Emoji from "react-native-emoji";
+import {
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
+} from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import Toast from "react-native-toast-message";
 import * as Progress from "react-native-progress";
+import Toast from "react-native-toast-message";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 import { getTodayDate } from "../utils/dateUtils";
 import { TodoModalContent } from "./TodoModalContent";
+import { IconCheck } from "./icons/IconCheck";
 
 interface TodoCardProps {
     todo: Todo;
@@ -71,7 +86,7 @@ export function TodoCard({
     const isDone = localTodo.status === TODO_STATUS.DONE;
     const isSkipped = localTodo.status === TODO_STATUS.SKIPPED;
     const category = categories.find((cat) => cat.id === localTodo.categoryId);
-    
+
     // Define thickness como 0 quando status é done ou targetValue é 1
     const progressThickness = isDone || localTodo.targetValue === "1" ? 0 : 1;
 
@@ -146,14 +161,14 @@ export function TodoCard({
         // Verifica se houve alterações antes de fechar (compara com valores originais do prop)
         const hasStatusChanged = modalStatus !== todo.status;
         const hasProgressChanged = modalProgressValue !== todo.progressValue;
-        
+
         if (hasStatusChanged || hasProgressChanged) {
             // Salva as alterações no backend
             onSave?.(todo.id, modalStatus, modalProgressValue, selectedDate);
             // Atualiza o estado local com os novos valores do modal (não reseta)
             setLocalTodo({ ...localTodo, status: modalStatus, progressValue: modalProgressValue });
         }
-        
+
         bottomSheetModalRef.current?.dismiss();
         // Reset modal state to original values from prop (para o próximo uso do modal)
         setModalStatus(todo.status);
@@ -303,7 +318,6 @@ export function TodoCard({
                                     thickness={progressThickness}
                                     borderWidth={0.01}
                                     color={colors.success}
-                                   
                                     showsText={false}
                                 />
                                 <View style={styles.emojiWrapper}>
@@ -373,7 +387,7 @@ export function TodoCard({
                                 {isSkipped ? (
                                     <Ionicons name="play-forward-outline" size={28} color={colors.warning.base} />
                                 ) : isDone ? (
-                                    <Image source={require("../../assets/images/check.png")} style={styles.checkImage} />
+                                    <IconCheck size={24} color={colors.success} />
                                 ) : (
                                     <Ionicons name="checkmark-circle-outline" size={28} color={colors.gray[300]} />
                                 )}
@@ -440,12 +454,12 @@ export function TodoCard({
                         style={styles.notesModalKeyboardAvoid}
                     >
                         <View style={styles.notesModalHeader}>
-                            <Pressable onPress={handleCloseNotesModal} style={styles.notesModalCloseButton}>
-                                <Text style={styles.notesModalCloseText}>Cancel</Text>
+                            <Pressable onPress={handleCloseNotesModal} style={styles.notesModalCancelButton}>
+                                <Text style={styles.notesModalCancelText}>Cancel</Text>
                             </Pressable>
                             <Text style={styles.notesModalTitle}>Notes</Text>
-                            <Pressable onPress={handleSaveNotes} style={styles.notesModalSaveButton}>
-                                <Text style={styles.notesModalSaveText}>Save</Text>
+                            <Pressable onPress={handleSaveNotes} style={styles.notesModalDoneButton}>
+                                <Text style={styles.notesModalDoneText}>Done</Text>
                             </Pressable>
                         </View>
                         <View style={styles.notesModalBody}>
@@ -519,7 +533,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 4,
-        marginTop: 6,//espaço entre o titulo e as tags para separar melhor
+        marginTop: 6, //espaço entre o titulo e as tags para separar melhor
     },
     metaContainer: {
         position: "absolute",
@@ -551,14 +565,14 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         alignSelf: "center",
-        marginRight: 4,//espaço entre o titulo e o botão de check
+        marginRight: 4, //espaço entre o titulo e o botão de check
     },
     checkButtonDone: {
         // Estilo adicional quando está marcado
     },
     checkImage: {
-        width: 25,
-        height: 25,
+        width: 24,
+        height: 24,
     },
     notesButton: {
         backgroundColor: colors.primary,
@@ -640,25 +654,38 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: colors.gray[200],
     },
-    notesModalCloseButton: {
-        padding: 8,
+    notesModalCancelButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
     },
-    notesModalCloseText: {
-        fontSize: 16,
-        color: colors.text.body,
+    notesModalCancelText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.white,
     },
     notesModalTitle: {
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
+        flex: 1,
+        textAlign: "center",
     },
-    notesModalSaveButton: {
-        padding: 8,
+    notesModalDoneButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
     },
-    notesModalSaveText: {
-        fontSize: 16,
+    notesModalDoneText: {
+        fontSize: 12,
         fontWeight: "600",
-        color: colors.primary,
+        color: colors.white,
     },
     notesModalBody: {
         flex: 1,

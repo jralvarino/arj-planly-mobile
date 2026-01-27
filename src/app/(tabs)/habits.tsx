@@ -5,7 +5,7 @@ import { Dialog, Button, Portal } from "react-native-paper";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
-import { HabitCard } from "../../components/HabitCard";
+import { HabitCard } from "../../components/habit/HabitCard";
 import { Habit } from "../../models/Habit";
 import { colors } from "../../theme/colors";
 import { useHabitsViewModel } from "../../viewmodels/habit/useHabitsViewModel";

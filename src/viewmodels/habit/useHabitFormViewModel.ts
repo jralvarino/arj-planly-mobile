@@ -1,12 +1,15 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import moment from "moment";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Dimensions } from "react-native";
 import Toast from "react-native-toast-message";
+import BottomSheetModal from "@gorhom/bottom-sheet";
 import { colors } from "../../theme/colors";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
 import { createHabit, getHabitById, updateHabit } from "../../service/habit.service";
+import { UnitType, PeriodType as PeriodTypeValue, PeriodType, UNIT_OPTIONS } from "../../utils/constants";
 
 export function useHabitFormViewModel() {
     const router = useRouter();
@@ -17,11 +20,9 @@ export function useHabitFormViewModel() {
     const [description, setDescription] = useState("");
     const [color, setColor] = useState(colors.habitDefault);
     const [emoji, setEmoji] = useState("");
-    const [unit, setUnit] = useState<"count" | "pg" | "km" | "ml">("count");
+    const [unit, setUnit] = useState<UnitType>("count");
     const [value, setValue] = useState("1");
-    const [periodType, setPeriodType] = useState<"every_day" | "specific_days_week" | "specific_days_month">(
-        "every_day"
-    );
+    const [periodType, setPeriodType] = useState<PeriodTypeValue>(PeriodType.EVERY_DAY);
     const [periodValue, setPeriodValue] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [period, setPeriod] = useState<"Anytime" | "Morning" | "Afternoon" | "Evening">("Anytime");
@@ -34,6 +35,16 @@ export function useHabitFormViewModel() {
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(false);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+    // UI State for modals
+    const [showEmojiModal, setShowEmojiModal] = useState(false);
+
+    // Refs for modals
+    const emojiBottomSheetRef = useRef<BottomSheetModal | null>(null);
+    const unitBottomSheetRef = useRef<BottomSheetModal | null>(null);
+    const reminderTimePickerRef = useRef<BottomSheetModal | null>(null);
+    const startDatePickerRef = useRef<BottomSheetModal | null>(null);
+    const endDatePickerRef = useRef<BottomSheetModal | null>(null);
 
     // Load categories on focus
     const fetchCategories = useCallback(async () => {
@@ -65,7 +76,7 @@ export function useHabitFormViewModel() {
         setEmoji("");
         setUnit("count");
         setValue("1");
-        setPeriodType("every_day");
+        setPeriodType(PeriodType.EVERY_DAY);
         setPeriodValue("");
         setPeriod("Anytime");
         setReminderEnabled(false);
@@ -177,7 +188,7 @@ export function useHabitFormViewModel() {
                 unit,
                 value,
                 period_type: periodType,
-                period_value: periodType === "every_day" ? undefined : periodValue || undefined,
+                period_value: periodType === PeriodType.EVERY_DAY ? undefined : periodValue || undefined,
                 categoryId,
                 period,
                 reminder_enabled: reminderEnabled,
@@ -247,7 +258,7 @@ export function useHabitFormViewModel() {
 
     // Parse periodValue to array of selected days
     const selectedDays = useMemo(() => {
-        return periodType === "specific_days_week" && periodValue
+        return periodType === PeriodType.WEEKLY && periodValue
             ? periodValue
                   .split(",")
                   .map((day) => day.trim())
@@ -257,7 +268,7 @@ export function useHabitFormViewModel() {
 
     // Parse periodValue to array of selected month days
     const selectedMonthDays = useMemo(() => {
-        return periodType === "specific_days_month" && periodValue
+        return periodType === PeriodType.MONTHLY && periodValue
             ? periodValue
                   .split(",")
                   .map((day) => day.trim())
@@ -306,15 +317,130 @@ export function useHabitFormViewModel() {
 
     // Handle period type change
     const handlePeriodTypeChange = useCallback(
-        (type: "every_day" | "specific_days_week" | "specific_days_month") => {
+        (type: PeriodTypeValue) => {
             // Clear periodValue if changing to every_day or to a different type
-            if (type === "every_day" || periodType !== type) {
+            if (type === PeriodType.EVERY_DAY || periodType !== type) {
                 setPeriodValue("");
             }
             setPeriodType(type);
         },
         [periodType, setPeriodType, setPeriodValue]
     );
+
+    // Modal handlers
+    const handlePresentEmojiModal = useCallback(() => {
+        setShowEmojiModal(true);
+        const ref = emojiBottomSheetRef.current as any;
+        if (ref) {
+            if (typeof ref.present === "function") {
+                ref.present();
+            } else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            } else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
+        }
+    }, []);
+
+
+    const handleOpenGoalModal = useCallback(() => {
+        const ref = unitBottomSheetRef.current as any;
+        if (ref) {
+            if (typeof ref.present === "function") {
+                ref.present();
+            } else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            } else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
+        }
+    }, []);
+
+    const handleOpenReminderModal = useCallback(() => {
+        const ref = reminderTimePickerRef.current as any;
+        if (ref) {
+            if (typeof ref.present === "function") {
+                ref.present();
+            } else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            } else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
+        }
+    }, []);
+
+    const handleOpenStartDateModal = useCallback(() => {
+        const ref = startDatePickerRef.current as any;
+        if (ref) {
+            if (typeof ref.present === "function") {
+                ref.present();
+            } else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            } else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
+        }
+    }, []);
+
+    const handleOpenEndDateModal = useCallback(() => {
+        const ref = endDatePickerRef.current as any;
+        if (ref) {
+            if (typeof ref.present === "function") {
+                ref.present();
+            } else if (typeof ref.snapToIndex === "function") {
+                ref.snapToIndex(0);
+            } else if (typeof ref.expand === "function") {
+                ref.expand();
+            }
+        }
+    }, []);
+
+    // Simplified handlers
+    const handleSetPeriod = useCallback(
+        (periodValue: "Anytime" | "Morning" | "Afternoon" | "Evening") => {
+            setPeriod(periodValue);
+        },
+        [setPeriod]
+    );
+
+    const handleSetColor = useCallback(
+        (colorValue: string) => {
+            setColor(colorValue);
+        },
+        [setColor]
+    );
+
+    const handleSetCategoryId = useCallback(
+        (id: string) => {
+            setCategoryId(id);
+        },
+        [setCategoryId]
+    );
+
+    // Computed values
+    const emojiSelectorHeight = useMemo(() => {
+        const screenHeight = Dimensions.get("window").height;
+        const modalHeight = screenHeight * 0.95; // 95% snapPoint
+        const headerHeight = 60; // Approximate header height
+        const padding = 100; // Increased padding to ensure last row is visible
+        return modalHeight - headerHeight - padding;
+    }, []);
+
+    const goalText = useMemo(() => {
+        const displayValue = value || "1";
+        const unitLabel = UNIT_OPTIONS.find((opt) => opt.code === unit)?.label || "Count";
+        return `${displayValue} ${unitLabel}`;
+    }, [value, unit]);
+
+    const formattedStartDate = useMemo(() => {
+        if (!startDate) return "Select";
+        return moment(startDate, "YYYY-MM-DD").format("DD/MM/YYYY");
+    }, [startDate]);
+
+    const formattedEndDate = useMemo(() => {
+        if (!endDate) return "Select";
+        return moment(endDate, "YYYY-MM-DD").format("DD/MM/YYYY");
+    }, [endDate]);
 
     return {
         // State
@@ -339,10 +465,21 @@ export function useHabitFormViewModel() {
         initialLoading,
         isEditMode,
 
+        // UI State
+        showEmojiModal,
+        emojiBottomSheetRef,
+        unitBottomSheetRef,
+        reminderTimePickerRef,
+        startDatePickerRef,
+        endDatePickerRef,
+
         // Computed values
         selectedDays,
         selectedMonthDays,
         monthDays,
+        goalText,
+        formattedStartDate,
+        formattedEndDate,
 
         // Actions
         setTitle,
@@ -365,5 +502,14 @@ export function useHabitFormViewModel() {
         toggleDay,
         toggleMonthDay,
         handlePeriodTypeChange,
+        handleSetPeriod,
+        handleSetColor,
+        handleSetCategoryId,
+        handlePresentEmojiModal,
+        handleOpenGoalModal,
+        handleOpenReminderModal,
+        handleOpenStartDateModal,
+        handleOpenEndDateModal,
+        setShowEmojiModal,
     };
 }

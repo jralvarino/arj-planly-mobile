@@ -25,6 +25,7 @@ src/
 ## Padrão MVVM
 
 ### Model (Modelos)
+
 - Localização: `src/models/`
 - Responsabilidade: Definir estruturas de dados e tipos
 - Exemplo: `Todo.ts`, `Category.ts`, `Habit.ts`
@@ -46,6 +47,7 @@ export interface Todo {
 ```
 
 ### View (Componentes)
+
 - Localização: `src/components/` e `src/app/`
 - Responsabilidade: Renderização e interação do usuário
 - **NÃO deve conter lógica de negócio**
@@ -66,6 +68,7 @@ export function TodoCard({ todo }: TodoCardProps) {
 ```
 
 ### ViewModel (Hooks Customizados)
+
 - Localização: `src/viewmodels/`
 - Nomenclatura: `useXxxViewModel.ts`
 - Responsabilidade: Gerenciar estado, lógica de negócio e comunicação com services
@@ -75,7 +78,7 @@ export function TodoCard({ todo }: TodoCardProps) {
 export function useTodoViewModel() {
     const [todos, setTodos] = useState<Todo[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     const fetchTodos = useCallback(async (date: string) => {
         setLoading(true);
         try {
@@ -87,7 +90,7 @@ export function useTodoViewModel() {
             setLoading(false);
         }
     }, []);
-    
+
     return {
         todos,
         loading,
@@ -98,6 +101,7 @@ export function useTodoViewModel() {
 ```
 
 **Regras para ViewModels:**
+
 - ✅ Usar `useCallback` para funções expostas
 - ✅ Gerenciar estados de loading, error, data
 - ✅ Fazer chamadas a services (não diretamente à API)
@@ -106,7 +110,87 @@ export function useTodoViewModel() {
 - ❌ Não fazer renderização (isso é responsabilidade da View)
 - ❌ Não acessar diretamente `planlyApiClient` (usar services)
 
+### ViewModels para Modais
+
+Quando criar modais complexos (especialmente `BottomSheetModal`), criar um ViewModel dedicado para gerenciar a lógica e estado do modal.
+
+**Estrutura recomendada:**
+
+```typescript
+// ✅ GOOD - ViewModel para modal
+interface UseXxxModalViewModelProps {
+    modalRef: React.RefObject<BottomSheetModal>;
+    initialValue: string;
+    onConfirm: (value: string) => void;
+    onDismiss?: () => void;
+}
+
+export function useXxxModalViewModel({
+    modalRef,
+    initialValue,
+    onConfirm,
+    onDismiss,
+}: UseXxxModalViewModelProps) {
+    const [tempValue, setTempValue] = useState(initialValue);
+    
+    const handleDismiss = useCallback(() => {
+        // Lógica para fechar o modal
+        const ref = modalRef.current as any;
+        if (ref?.dismiss) ref.dismiss();
+        onDismiss?.();
+    }, [modalRef, onDismiss]);
+
+    const handleConfirm = useCallback(() => {
+        onConfirm(tempValue);
+        handleDismiss();
+    }, [tempValue, onConfirm, handleDismiss]);
+
+    return {
+        tempValue,
+        handleDismiss,
+        handleConfirm,
+        // ... outros estados e funções
+    };
+}
+```
+
+**Componente usando o ViewModel:**
+
+```typescript
+// ✅ GOOD - Componente de modal usando ViewModel
+export function XxxModal({ modalRef, initialValue, onConfirm, onDismiss }: XxxModalProps) {
+    const {
+        tempValue,
+        handleDismiss,
+        handleConfirm,
+    } = useXxxModalViewModel({
+        modalRef,
+        initialValue,
+        onConfirm,
+        onDismiss,
+    });
+
+    return (
+        <BottomSheetModal ref={modalRef}>
+            {/* Renderização do modal */}
+        </BottomSheetModal>
+    );
+}
+```
+
+**Regras para ViewModels de Modais:**
+
+- ✅ Criar ViewModel separado quando o modal tem lógica complexa ou múltiplos estados
+- ✅ Gerenciar estado temporário no ViewModel (valores antes de confirmar)
+- ✅ Expor funções `handleDismiss` e `handleConfirm` do ViewModel
+- ✅ Receber `modalRef`, valores iniciais e callbacks como props
+- ✅ Usar `useCallback` para todas as funções expostas
+- ✅ Componente deve apenas renderizar e chamar funções do ViewModel
+- ❌ Não colocar lógica de negócio no componente do modal
+- ❌ Não gerenciar estado do modal diretamente no componente pai
+
 ### Service (Serviços)
+
 - Localização: `src/service/`
 - Responsabilidade: Abstrair chamadas à API
 - Nomenclatura: `xxx.service.ts`
@@ -121,11 +205,12 @@ export const getTodosByDate = async (date: string): Promise<Todo[]> => {
 // ❌ BAD - Lógica de negócio no service
 export const getTodosByDate = async (date: string): Promise<Todo[]> => {
     const { data } = await planlyApiClient.get<Todo[]>(`/todo/date?date=${date}`);
-    return data.filter(t => t.active); // ❌ Filtros devem estar no ViewModel
+    return data.filter((t) => t.active); // ❌ Filtros devem estar no ViewModel
 };
 ```
 
 **Regras para Services:**
+
 - ✅ Apenas chamadas HTTP e transformação de dados da API
 - ✅ Retornar tipos bem definidos (Promise<T>)
 - ✅ Usar `planlyApiClient` para requisições
@@ -135,6 +220,7 @@ export const getTodosByDate = async (date: string): Promise<Todo[]> => {
 ## Padrões Adicionais
 
 ### Estado Global (Stores)
+
 - Localização: `src/stores/`
 - Tecnologia: Zustand
 - Uso: Apenas para estado que precisa ser compartilhado entre múltiplas telas
@@ -144,16 +230,20 @@ export const getTodosByDate = async (date: string): Promise<Todo[]> => {
 // ✅ GOOD - Store para estado global
 export const useAuthStore = create<AuthState>((set) => ({
     isAuthenticated: false,
-    checkAuthStatus: async () => { /* ... */ },
+    checkAuthStatus: async () => {
+        /* ... */
+    },
 }));
 ```
 
 ### API Client
+
 - Localização: `src/api/planly-api.ts`
 - Responsabilidade: Configurar instância do Axios com interceptors
 - **Não deve ser usado diretamente nos componentes ou ViewModels** - sempre usar services
 
 ### Tratamento de Erros
+
 - ✅ Usar `Toast.show()` para erros do usuário
 - ✅ Logar erros no console para debug
 - ✅ Implementar fallback/rollback em optimistic updates
@@ -175,6 +265,7 @@ try {
 ```
 
 ### Optimistic Updates
+
 - ✅ Atualizar UI imediatamente
 - ✅ Fazer chamada à API em background
 - ✅ Reverter em caso de erro
@@ -184,10 +275,8 @@ try {
 // ✅ GOOD - Optimistic update com rollback
 const handleToggle = async (todoId: string) => {
     // 1. Atualiza UI imediatamente
-    setTodos(prev => prev.map(t => 
-        t.id === todoId ? { ...t, status: newStatus } : t
-    ));
-    
+    setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, status: newStatus } : t)));
+
     // 2. Chama API em background
     updateTodoStatus(todoId, newStatus)
         .then(() => {
@@ -196,27 +285,67 @@ const handleToggle = async (todoId: string) => {
         })
         .catch((err) => {
             // 4. Reverte em caso de erro
-            setTodos(prev => prev.map(t => 
-                t.id === todoId ? { ...t, status: oldStatus } : t
-            ));
+            setTodos((prev) => prev.map((t) => (t.id === todoId ? { ...t, status: oldStatus } : t)));
         });
 };
 ```
 
 ### Memoização
+
 - ✅ Usar `useCallback` para funções em ViewModels
 - ✅ Usar `useMemo` para cálculos custosos
 - ✅ Usar `useRef` para valores que não causam re-render
 
+### Componentes de Ícones SVG
+
+- Localização: `src/components/icons/`
+- Nomenclatura: `IconXxx.tsx` (ex: `IconCheck.tsx`)
+- Responsabilidade: Renderizar ícones SVG reutilizáveis
+
+```typescript
+// ✅ GOOD - Componente de ícone SVG
+import { colors } from "@/theme/colors";
+import React from "react";
+import Svg, { Path } from "react-native-svg";
+
+interface IconCheckProps {
+    size?: number;
+    color?: string;
+}
+
+export function IconCheck({ size = 24, color = colors.success }: IconCheckProps) {
+    return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" style={{ alignItems: "center", justifyContent: "center" }}>
+            <Path d="..." fill={color} />
+        </Svg>
+    );
+}
+```
+
+**Regras para Ícones SVG:**
+
+- ✅ Criar um componente separado para cada ícone SVG
+- ✅ Usar `react-native-svg` para renderizar SVGs
+- ✅ Centralizar o SVG com `alignItems: "center"` e `justifyContent: "center"`
+- ✅ Aceitar props `size` (padrão: 24) e `color` (padrão: cor semântica apropriada)
+- ✅ Usar `viewBox="0 0 24 24"` para manter proporção
+- ✅ Nomear componentes como `IconXxx` (ex: `IconCheck`, `IconClose`)
+- ✅ Localizar em `src/components/icons/`
+- ❌ Não usar `Image` com arquivos `.svg` (não funciona no React Native)
+- ❌ Não criar componente genérico `Icon` com múltiplos ícones - criar componentes específicos
+
 ## Convenções de Código
 
 ### Nomenclatura
+
 - **ViewModels**: `useXxxViewModel.ts` (ex: `useTodoViewModel.ts`)
 - **Services**: `xxx.service.ts` (ex: `todo.service.ts`)
 - **Models**: `Xxx.ts` (ex: `Todo.ts`)
 - **Components**: `Xxx.tsx` (ex: `TodoCard.tsx`)
+- **Icons**: `IconXxx.tsx` (ex: `IconCheck.tsx`) - localizado em `src/components/icons/`
 
 ### Imports
+
 - ✅ Usar paths absolutos com `@/` quando configurado
 - ✅ Agrupar imports: externos → internos → relativos
 
@@ -229,6 +358,7 @@ import { getTodosByDate } from "../../service/todo.service";
 ```
 
 ### TypeScript
+
 - ✅ Sempre tipar props de componentes
 - ✅ Usar interfaces para estruturas de dados
 - ✅ Evitar `any` - usar `unknown` quando necessário
@@ -236,6 +366,7 @@ import { getTodosByDate } from "../../service/todo.service";
 ## Gerenciamento de Cores
 
 ### Sistema de Cores Centralizado
+
 - Localização: `src/theme/colors.ts`
 - **TODAS as cores devem ser importadas deste arquivo**
 - ❌ **NUNCA usar cores hardcoded** (hex codes, rgb, rgba, "white", "black", etc.)
@@ -277,10 +408,10 @@ O arquivo `colors.ts` contém as seguintes categorias:
 - **Cores de texto**: `text.title`, `text.body`
 - **Cores de fundo**: `background`, `tabBar`, `white`, `black`
 - **Escala de cinza**: `gray[50]`, `gray[100]`, `gray[200]`, `gray[300]`
-- **Cores semânticas**: 
-  - `success` - Verde para sucesso
-  - `error` - Vermelho para erros
-  - `warning` - Objeto com cores de aviso (light, base, medium, dark, text)
+- **Cores semânticas**:
+    - `success` - Verde para sucesso
+    - `error` - Vermelho para erros
+    - `warning` - Objeto com cores de aviso (light, base, medium, dark, text)
 - **Overlays**: `overlay.white`, `overlay.white90`, `overlay.black`, `overlay.backdrop`
 - **Sombras**: `shadow`, `textShadow`
 - **Toast**: `toast.success`, `toast.info`, `toast.error`
@@ -317,7 +448,7 @@ export const colors: Colors = {
 
 // Depois usar:
 import { colors } from "@/theme/colors";
-backgroundColor: colors.newColor
+backgroundColor: colors.newColor;
 ```
 
 ## Padrões de UI e Espaçamento
@@ -354,11 +485,237 @@ const styles = StyleSheet.create({
 ```
 
 **Regras para Cards:**
+
 - ✅ Usar `paddingTop: 12` para reduzir espaço no topo
 - ✅ Usar `paddingBottom: 20` para manter espaço adequado na parte inferior
 - ✅ Usar `paddingHorizontal: 20` para espaçamento lateral consistente
 - ✅ Aplicar o mesmo padrão a todos os cards de seção no mesmo componente
 - ❌ Não usar `padding: 20` quando precisar de controle diferente entre topo e bottom
+
+## Padrões de Modais (BottomSheetModal)
+
+### Estrutura do Modal
+
+Os modais devem usar `@gorhom/bottom-sheet` com `BottomSheetModal` e seguir um padrão consistente:
+
+```typescript
+// ✅ GOOD - Estrutura padrão de modal
+<BottomSheetModal
+    ref={modalRef}
+    snapPoints={snapPoints}
+    enablePanDownToClose={true}
+    backgroundStyle={styles.modalBackground}
+    handleIndicatorStyle={styles.modalIndicator}
+    onDismiss={handleClose}
+    backdropComponent={(props) => (
+        <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            onPress={handleClose}
+        />
+    )}
+>
+    <BottomSheetView style={styles.modalContent}>
+        {/* Conteúdo do modal */}
+    </BottomSheetView>
+</BottomSheetModal>
+```
+
+### Header do Modal
+
+O header deve seguir um padrão consistente:
+
+- **Layout**: Flexbox com `justifyContent: "space-between"`
+- **Título**: Centralizado usando `flex: 1` e `textAlign: "center"`
+- **Botões**: Cancel à esquerda, Done à direita
+- **Padding**: `padding: 16`, `paddingTop: 0` ou `paddingTop: 4` (reduzido)
+
+```typescript
+// ✅ GOOD - Header padrão de modal
+<View style={styles.modalHeader}>
+    <Pressable onPress={handleCancel} style={styles.modalCancelButton}>
+        <Text style={styles.modalCancelText}>Cancel</Text>
+    </Pressable>
+    <Text style={styles.modalTitle}>Modal Title</Text>
+    <Pressable onPress={handleDone} style={styles.modalDoneButton}>
+        <Text style={styles.modalDoneText}>Done</Text>
+    </Pressable>
+</View>
+```
+
+### Estilo dos Botões (Cancel e Done)
+
+Ambos os botões devem ter o mesmo estilo visual:
+
+```typescript
+// ✅ GOOD - Estilo padrão dos botões
+modalCancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+},
+modalCancelText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.white,
+},
+modalDoneButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+},
+modalDoneText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.white,
+},
+```
+
+**Regras para Botões:**
+
+- ✅ Ambos os botões (Cancel e Done) devem ter o mesmo estilo
+- ✅ Fundo: `colors.primary`
+- ✅ Texto: `colors.white` com `fontSize: 12`
+- ✅ Cantos arredondados: `borderRadius: 20`
+- ✅ Padding: `paddingVertical: 8`, `paddingHorizontal: 20`
+
+### Background do Modal
+
+```typescript
+// ✅ GOOD - Background padrão
+modalBackground: {
+    backgroundColor: colors.gray[100],
+},
+modalIndicator: {
+    backgroundColor: colors.gray[200],
+    width: 40,
+    height: 4,
+},
+```
+
+### Título do Modal
+
+```typescript
+// ✅ GOOD - Título centralizado
+modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.text.title,
+    flex: 1,
+    textAlign: "center",
+},
+```
+
+### Nomenclatura de Variáveis e Estilos
+
+**Padrão de nomenclatura:**
+
+- Prefixo: `{modalName}Modal` (ex: `notesModal`, `unitModal`, `goalModal`)
+- Botões: `{prefix}CancelButton`, `{prefix}DoneButton`
+- Textos: `{prefix}CancelText`, `{prefix}DoneText`
+- Título: `{prefix}Title`
+- Header: `{prefix}Header`
+- Background: `{prefix}Background`
+- Content: `{prefix}Content`
+
+```typescript
+// ✅ GOOD - Nomenclatura consistente
+// Para modal de Notes:
+notesModalHeader;
+notesModalCancelButton;
+notesModalCancelText;
+notesModalDoneButton;
+notesModalDoneText;
+notesModalTitle;
+notesModalBackground;
+notesModalContent;
+
+// Para modal de Goal/Unit:
+unitModalHeader;
+unitModalCancelButton;
+unitModalCancelText;
+unitModalDoneButton;
+unitModalDoneText;
+unitModalTitle;
+unitModalBackground;
+unitModalContent;
+```
+
+**Regras para Nomenclatura:**
+
+- ✅ Usar prefixo descritivo baseado na funcionalidade do modal
+- ✅ Sempre incluir "Modal" no nome do estilo
+- ✅ Botão de cancelar: `{prefix}CancelButton` e `{prefix}CancelText`
+- ✅ Botão de confirmar: `{prefix}DoneButton` e `{prefix}DoneText` (não "Save")
+- ✅ Texto do botão: "Cancel" e "Done" (não "Close" ou "Save")
+- ❌ Não usar "Close" ou "Save" - usar "Cancel" e "Done"
+
+### Exemplo Completo
+
+```typescript
+// ✅ GOOD - Modal completo seguindo padrões
+const styles = StyleSheet.create({
+    modalBackground: {
+        backgroundColor: colors.gray[100],
+    },
+    modalIndicator: {
+        backgroundColor: colors.gray[200],
+        width: 40,
+        height: 4,
+    },
+    modalContent: {
+        flex: 1,
+        padding: 0,
+    },
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        paddingTop: 0,
+    },
+    modalCancelButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    modalCancelText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.white,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: colors.text.title,
+        flex: 1,
+        textAlign: "center",
+    },
+    modalDoneButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: colors.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    modalDoneText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.white,
+    },
+});
+```
 
 ## Checklist ao Criar Nova Feature
 

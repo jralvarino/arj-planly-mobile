@@ -1,8 +1,6 @@
 import { colors } from "@/theme/colors";
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
-import Emoji from "react-native-emoji";
 import Svg, { Circle } from "react-native-svg";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
 
@@ -33,29 +31,10 @@ export function TodoModalContent({
 }: TodoModalContentProps) {
     return (
         <>
-            {/* Header com Emoji e Título */}
+            {/* Header com Título */}
             <View style={styles.modalHeaderContainer}>
                 <View style={styles.modalHeader}>
-                    <View style={styles.modalEmojiContainer}>
-                        <View style={styles.modalEmojiBackground} />
-                        <View style={styles.modalEmojiWrapper}>
-                            {todo.emoji ? (
-                                todo.emoji.length <= 2 ? (
-                                    <Text style={styles.modalEmoji}>{todo.emoji}</Text>
-                                ) : (
-                                    <Emoji name={todo.emoji} style={styles.modalEmoji} />
-                                )
-                            ) : (
-                                <Text style={styles.modalEmoji}>📷</Text>
-                            )}
-                        </View>
-                    </View>
                     <Text style={styles.modalTitle}>{todo.title}</Text>
-                    {onClose && (
-                        <Pressable onPress={onClose} style={styles.closeButton}>
-                            <Ionicons name="close" size={18} color="grey" />
-                        </Pressable>
-                    )}
                 </View>
             </View>
 
@@ -153,45 +132,14 @@ const styles = StyleSheet.create({
     modalHeader: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "center",
         gap: 12,
     },
-    closeButton: {
-        position: "absolute",
-        right: 10,
-        top: 0,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: colors.gray[200],
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 10,
-    },
-    modalEmojiContainer: {
-        justifyContent: "center",
-        alignItems: "center",
-        position: "relative",
-    },
-    modalEmojiBackground: {
-        position: "absolute",
-        width: 45,
-        height: 45,
-        borderRadius: 22.5,
-        backgroundColor: colors.gray[200],
-    },
-    modalEmojiWrapper: {
-        position: "relative",
-        zIndex: 1,
-    },
-    modalEmoji: {
-        fontSize: 26,
-    },
     modalTitle: {
-        flex: 1,
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
-        paddingRight: 40,
+        textAlign: "center",
     },
     modalBody: {
         padding: 16,

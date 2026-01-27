@@ -1,16 +1,11 @@
 import { colors } from "@/theme/colors";
-import { WEEK_DAYS } from "@/utils/constants";
+import { PeriodType, WEEK_DAYS } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import BottomSheetModal, { BottomSheetView } from "@gorhom/bottom-sheet";
-import moment from "moment";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React from "react";
 import {
     ActivityIndicator,
-    Dimensions,
     KeyboardAvoidingView,
-    Modal,
     Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
     Switch,
@@ -19,26 +14,13 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import Emoji from "react-native-emoji";
-import EmojiSelector, { Categories } from "react-native-emoji-selector";
-import { useHabitFormViewModel } from "../viewmodels/habit/useHabitFormViewModel";
-import { DatePicker } from "./DatePicker";
-import { TimePicker } from "./TimePicker";
-
-const UNIT_OPTIONS: Array<{ code: "count" | "pg" | "km" | "ml"; label: string }> = [
-    { code: "count", label: "Count" },
-    { code: "pg", label: "Pages" },
-    { code: "km", label: "Km" },
-    { code: "ml", label: "Ml" },
-];
+import { useHabitFormViewModel } from "../../viewmodels/habit/useHabitFormViewModel";
+import { HabitEmojiModal } from "./HabitEmojiModal";
+import { HabitGoalModal } from "./HabitGoalModal";
+import { HabitReminderModal } from "./HabitReminderModal";
+import { HabitDateRangeModal } from "./HabitDateRangeModal";
 
 export function HabitFormScreen() {
-    const [showUnitModal, setShowUnitModal] = useState(false);
-    const [showTimePicker, setShowTimePicker] = useState(false);
-    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const [showEmojiModal, setShowEmojiModal] = useState(false);
-    const emojiBottomSheetRef = useRef<BottomSheetModal>(null);
     const {
         title,
         description,
@@ -47,7 +29,6 @@ export function HabitFormScreen() {
         unit,
         value,
         periodType,
-        periodValue,
         categoryId,
         period,
         reminderEnabled,
@@ -59,14 +40,24 @@ export function HabitFormScreen() {
         loading,
         categories,
         categoriesLoading,
+        showEmojiModal,
+        emojiBottomSheetRef,
+        unitBottomSheetRef,
+        reminderTimePickerRef,
+        startDatePickerRef,
+        endDatePickerRef,
+        selectedDays,
+        selectedMonthDays,
+        monthDays,
+        goalText,
+        formattedStartDate,
+        formattedEndDate,
         setTitle,
         setDescription,
         setColor,
         setEmoji,
         setUnit,
         setValue,
-        setPeriodType,
-        setPeriodValue,
         setCategoryId,
         setPeriod,
         setReminderEnabled,
@@ -76,104 +67,19 @@ export function HabitFormScreen() {
         setActive,
         handleActiveChange,
         handleSubmit,
-        selectedDays,
-        selectedMonthDays,
-        monthDays,
         toggleDay,
         toggleMonthDay,
         handlePeriodTypeChange,
+        handleSetPeriod,
+        handleSetColor,
+        handleSetCategoryId,
+        handlePresentEmojiModal,
+        handleOpenGoalModal,
+        handleOpenReminderModal,
+        handleOpenStartDateModal,
+        handleOpenEndDateModal,
+        setShowEmojiModal,
     } = useHabitFormViewModel();
-
-    // Handler para abrir o modal de emoji
-    const handlePresentEmojiModal = useCallback(() => {
-        setShowEmojiModal(true);
-        const ref = emojiBottomSheetRef.current as any;
-        if (ref) {
-            // Se tiver o método present, usa ele (BottomSheetModal)
-            if (typeof ref.present === "function") {
-                ref.present();
-            }
-            // Caso contrário, usa snapToIndex(0) para abrir (BottomSheet regular)
-            else if (typeof ref.snapToIndex === "function") {
-                ref.snapToIndex(0);
-            }
-            // Ou expand() como fallback
-            else if (typeof ref.expand === "function") {
-                ref.expand();
-            }
-        }
-    }, []);
-
-    // Handler para fechar o modal de emoji
-    const handleDismissEmojiModal = useCallback(() => {
-        setShowEmojiModal(false);
-        const ref = emojiBottomSheetRef.current as any;
-        if (ref) {
-            // Tenta forceClose() primeiro (força o fechamento)
-            if (ref.forceClose) {
-                ref.forceClose();
-            }
-            // Fallback para close()
-            else if (ref.close) {
-                ref.close();
-            }
-            // Fallback para snapToIndex(-1)
-            else if (ref.snapToIndex) {
-                ref.snapToIndex(-1);
-            }
-        }
-    }, []);
-
-
-    // Memoized handlers for better performance
-    const handleSetPeriod = useCallback(
-        (periodValue: "Anytime" | "Morning" | "Afternoon" | "Evening") => {
-            setPeriod(periodValue);
-        },
-        [setPeriod]
-    );
-
-    const handleSetColor = useCallback(
-        (colorValue: string) => {
-            setColor(colorValue);
-        },
-        [setColor]
-    );
-
-    const handleSetCategoryId = useCallback(
-        (id: string) => {
-            setCategoryId(id);
-        },
-        [setCategoryId]
-    );
-
-    // Memoized handler for emoji selection
-    const handleEmojiSelected = useCallback(
-        (emojiChar: string) => {
-            setEmoji(emojiChar);
-            setShowEmojiModal(false);
-            const ref = emojiBottomSheetRef.current as any;
-            if (ref) {
-                if (ref.forceClose) {
-                    ref.forceClose();
-                } else if (ref.close) {
-                    ref.close();
-                } else if (ref.snapToIndex) {
-                    ref.snapToIndex(-1);
-                }
-            }
-        },
-        [setEmoji]
-    );
-
-    // Calculate available height for emoji selector
-    const emojiSelectorHeight = useMemo(() => {
-        const screenHeight = Dimensions.get("window").height;
-        const modalHeight = screenHeight * 0.95; // 95% snapPoint
-        const headerHeight = 60; // Approximate header height
-        const padding = 100; // Increased padding to ensure last row is visible
-        return modalHeight - headerHeight - padding;
-    }, []);
 
     if (categoriesLoading) {
         return (
@@ -317,7 +223,7 @@ export function HabitFormScreen() {
                     </View>
                 </View>
 
-                {/* Period Type Card */}
+                {/* Frequency Type Card */}
                 <View style={[styles.sectionCard, styles.frequencyCard]}>
                     <View style={[styles.section, styles.frequencySection]}>
                         <View style={styles.goalLabelContainer}>
@@ -325,62 +231,63 @@ export function HabitFormScreen() {
                         </View>
                         <View style={styles.periodTypeScrollContainer}>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("every_day")}
+                                onPress={() => handlePeriodTypeChange(PeriodType.EVERY_DAY)}
                                 style={[
                                     styles.periodTypeTag,
-                                    periodType === "every_day" && styles.periodTypeTagSelected,
+                                    periodType === PeriodType.EVERY_DAY && styles.periodTypeTagSelected,
                                 ]}
                                 activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
                                         styles.periodTypeTagText,
-                                        periodType === "every_day" && styles.periodTypeTagTextSelected,
+                                        periodType === PeriodType.EVERY_DAY && styles.periodTypeTagTextSelected,
                                     ]}
                                 >
                                     Every Day
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("specific_days_week")}
+                                onPress={() => handlePeriodTypeChange(PeriodType.WEEKLY)}
                                 style={[
                                     styles.periodTypeTag,
-                                    periodType === "specific_days_week" && styles.periodTypeTagSelected,
+                                    periodType === PeriodType.WEEKLY && styles.periodTypeTagSelected,
                                 ]}
                                 activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
                                         styles.periodTypeTagText,
-                                        periodType === "specific_days_week" && styles.periodTypeTagTextSelected,
+                                        periodType === PeriodType.WEEKLY && styles.periodTypeTagTextSelected,
                                     ]}
                                 >
                                     Weekly
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange("specific_days_month")}
+                                onPress={() => handlePeriodTypeChange(PeriodType.MONTHLY)}
                                 style={[
                                     styles.periodTypeTag,
-                                    periodType === "specific_days_month" && styles.periodTypeTagSelected,
+                                    periodType === PeriodType.MONTHLY && styles.periodTypeTagSelected,
                                 ]}
                                 activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
                                         styles.periodTypeTagText,
-                                        periodType === "specific_days_month" && styles.periodTypeTagTextSelected,
+                                        periodType === PeriodType.MONTHLY && styles.periodTypeTagTextSelected,
                                     ]}
                                 >
                                     Monthly
                                 </Text>
                             </TouchableOpacity>
                         </View>
-                        {periodType === "specific_days_week" && (
+                        {periodType === PeriodType.WEEKLY && (
                             <View style={[styles.weekDaysRow, { marginTop: 12 }]}>
                                 {WEEK_DAYS.map((day) => {
                                     const isSelected = selectedDays.some(
-                                        (selectedDay) => selectedDay.trim().toUpperCase() === day.code.trim().toUpperCase()
+                                        (selectedDay) =>
+                                            selectedDay.trim().toUpperCase() === day.code.trim().toUpperCase()
                                     );
                                     return (
                                         <TouchableOpacity
@@ -401,7 +308,7 @@ export function HabitFormScreen() {
                                 })}
                             </View>
                         )}
-                        {periodType === "specific_days_month" && (
+                        {periodType === PeriodType.MONTHLY && (
                             <View style={[styles.monthDaysGrid, { marginTop: 12 }]}>
                                 {monthDays.map((day) => {
                                     const isSelected = selectedMonthDays.some(
@@ -430,83 +337,124 @@ export function HabitFormScreen() {
                 </View>
 
                 {/* Goal Card */}
-                <View style={styles.sectionCard}>
-                    <View style={styles.section}>
+                <View style={[styles.sectionCard, styles.goalCard]}>
+                    <View style={[styles.section, styles.goalSection]}>
                         {/* Goal Label */}
                         <View style={styles.goalLabelContainer}>
                             <Text style={styles.goalLabel}>Goal</Text>
                         </View>
-                        {/* Value and Unit Row */}
-                        <View style={styles.valueUnitRow}>
-                            <View style={styles.valueContainer}>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Enter value"
-                                    value={value}
-                                    onChangeText={setValue}
-                                    keyboardType="numeric"
-                                    maxLength={10}
-                                    returnKeyType="done"
-                                    blurOnSubmit={true}
+                        {/* Goal Button */}
+                        <View style={styles.goalButtonWrapper}>
+                            <TouchableOpacity
+                                style={[styles.dateButton, styles.goalButtonFullWidth, styles.goalButtonContainer]}
+                                onPress={handleOpenGoalModal}
+                            >
+                                <Ionicons
+                                    name="locate-outline"
+                                    size={20}
+                                    color={colors.text.body}
+                                    style={styles.goalButtonIcon}
                                 />
-                            </View>
-                            <View style={styles.unitContainer}>
-                                <TouchableOpacity style={styles.unitButton} onPress={() => setShowUnitModal(true)}>
-                                    <Text style={styles.unitButtonText}>
-                                        {UNIT_OPTIONS.find((opt) => opt.code === unit)?.label || "Select unit"}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                                <Text style={styles.goalButtonText}>{goalText}</Text>
+                                <Ionicons
+                                    name="chevron-forward"
+                                    size={16}
+                                    color={colors.text.body}
+                                    style={styles.goalButtonArrow}
+                                />
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
 
                 {/* Time Card */}
                 <View style={styles.sectionCard}>
-                    <View style={styles.section}>
+                    <View style={[styles.section, styles.timeSection]}>
                         <View style={styles.goalLabelContainer}>
-                            <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Time</Text>
+                            <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Time of the Day</Text>
                         </View>
-                        <View style={styles.timeTagsRow}>
+                        <View style={styles.timeCardsRow}>
                             <TouchableOpacity
                                 onPress={() => handleSetPeriod("Anytime")}
-                                style={[styles.timeTag, period === "Anytime" && styles.timeTagSelected]}
+                                style={[styles.timeCard, period === "Anytime" && styles.timeCardSelected]}
                                 activeOpacity={0.7}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.timeTagText, period === "Anytime" && styles.timeTagTextSelected]}>
+                                <View
+                                    style={[
+                                        styles.timeCardIconContainer,
+                                        period === "Anytime" && styles.timeCardIconContainerSelected,
+                                    ]}
+                                >
+                                    <Ionicons name="sunny" size={24} color={colors.orange.base} />
+                                </View>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[styles.timeCardText, period === "Anytime" && styles.timeCardTextSelected]}
+                                >
                                     Anytime
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => handleSetPeriod("Morning")}
-                                style={[styles.timeTag, period === "Morning" && styles.timeTagSelected]}
+                                style={[styles.timeCard, period === "Morning" && styles.timeCardSelected]}
                                 activeOpacity={0.7}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.timeTagText, period === "Morning" && styles.timeTagTextSelected]}>
+                                <View
+                                    style={[
+                                        styles.timeCardIconContainer,
+                                        period === "Morning" && styles.timeCardIconContainerSelected,
+                                    ]}
+                                >
+                                    <Ionicons name="partly-sunny" size={24} color={colors.orange.base} />
+                                </View>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[styles.timeCardText, period === "Morning" && styles.timeCardTextSelected]}
+                                >
                                     Morning
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => handleSetPeriod("Afternoon")}
-                                style={[styles.timeTag, period === "Afternoon" && styles.timeTagSelected]}
+                                style={[styles.timeCard, period === "Afternoon" && styles.timeCardSelected]}
                                 activeOpacity={0.7}
                                 delayPressIn={0}
                             >
+                                <View
+                                    style={[
+                                        styles.timeCardIconContainer,
+                                        period === "Afternoon" && styles.timeCardIconContainerSelected,
+                                    ]}
+                                >
+                                    <Ionicons name="sunny" size={24} color={colors.orange.base} />
+                                </View>
                                 <Text
-                                    style={[styles.timeTagText, period === "Afternoon" && styles.timeTagTextSelected]}
+                                    numberOfLines={1}
+                                    style={[styles.timeCardText, period === "Afternoon" && styles.timeCardTextSelected]}
                                 >
                                     Afternoon
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => handleSetPeriod("Evening")}
-                                style={[styles.timeTag, period === "Evening" && styles.timeTagSelected]}
+                                style={[styles.timeCard, period === "Evening" && styles.timeCardSelected]}
                                 activeOpacity={0.7}
                                 delayPressIn={0}
                             >
-                                <Text style={[styles.timeTagText, period === "Evening" && styles.timeTagTextSelected]}>
+                                <View
+                                    style={[
+                                        styles.timeCardIconContainer,
+                                        period === "Evening" && styles.timeCardIconContainerSelected,
+                                    ]}
+                                >
+                                    <Ionicons name="moon" size={24} color={colors.orange.base} />
+                                </View>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[styles.timeCardText, period === "Evening" && styles.timeCardTextSelected]}
+                                >
                                     Evening
                                 </Text>
                             </TouchableOpacity>
@@ -515,12 +463,11 @@ export function HabitFormScreen() {
                 </View>
 
                 {/* Reminder Card */}
-                <View style={[styles.sectionCard, !reminderEnabled && styles.sectionCardCompact]}>
-                    <View style={[styles.section, !reminderEnabled && styles.sectionCompact]}>
-                        <View style={styles.reminderHeader}>
-                            <View style={styles.goalLabelContainer}>
-                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Reminder</Text>
-                            </View>
+                <View style={[styles.sectionCard, styles.goalCard]}>
+                    <View style={[styles.section, styles.goalSection]}>
+                        {/* Reminder Label */}
+                        <View style={styles.reminderLabelContainer}>
+                            <Text style={styles.goalLabel}>Reminder</Text>
                             <Switch
                                 value={reminderEnabled}
                                 onValueChange={(value) => {
@@ -533,12 +480,12 @@ export function HabitFormScreen() {
                                 thumbColor="white"
                             />
                         </View>
+                        {/* Reminder Button */}
                         {reminderEnabled && (
-                            <View style={styles.reminderTimeContainer}>
-                                <Text style={styles.reminderTimeLabel}>Time</Text>
+                            <View style={styles.goalButtonWrapper}>
                                 <TouchableOpacity
-                                    style={styles.reminderTimeButton}
-                                    onPress={() => setShowTimePicker(true)}
+                                    style={[styles.dateButton, styles.goalButtonFullWidth, styles.reminderTimeButton]}
+                                    onPress={handleOpenReminderModal}
                                 >
                                     <Ionicons
                                         name="time-outline"
@@ -546,7 +493,15 @@ export function HabitFormScreen() {
                                         color={colors.text.body}
                                         style={styles.reminderTimeIcon}
                                     />
-                                    <Text style={styles.reminderTimeButtonText}>{reminderTime || "Select time"}</Text>
+                                    <Text style={styles.reminderTimeButtonText}>
+                                        {reminderTime || "Select time"}
+                                    </Text>
+                                    <Ionicons
+                                        name="chevron-forward"
+                                        size={16}
+                                        color={colors.text.body}
+                                        style={styles.goalButtonArrow}
+                                    />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -554,50 +509,44 @@ export function HabitFormScreen() {
                 </View>
 
                 {/* Date Range Card */}
-                <View style={[styles.sectionCard, styles.sectionCardCompact]}>
-                    <View style={[styles.section, styles.sectionCompact]}>
-                        <View style={styles.reminderHeader}>
-                            <View style={styles.goalLabelContainer}>
-                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Date Range</Text>
-                            </View>
+                <View style={[styles.sectionCard, styles.goalCard]}>
+                    <View style={[styles.section, styles.goalSection]}>
+                        {/* Date Range Label */}
+                        <View style={styles.goalLabelContainer}>
+                            <Text style={styles.goalLabel}>Date Range</Text>
                         </View>
+                        {/* Date Range Buttons */}
                         <View style={styles.dateRangeContainer}>
                             <View style={styles.dateRangeRow}>
                                 <View style={styles.dateFieldWrapper}>
                                     <Text style={styles.dateFieldLabel}>Start Date</Text>
                                     <TouchableOpacity
-                                        style={styles.dateButton}
-                                        onPress={() => setShowStartDatePicker(true)}
+                                        style={[styles.dateButton, styles.dateRangeButton]}
+                                        onPress={handleOpenStartDateModal}
                                     >
                                         <Ionicons
                                             name="calendar-outline"
-                                            size={16}
+                                            size={20}
                                             color={colors.text.body}
-                                            style={styles.dateButtonIcon}
+                                            style={styles.dateRangeButtonIcon}
                                         />
-                                        <Text style={styles.dateButtonText}>
-                                            {startDate
-                                                ? moment(startDate, "YYYY-MM-DD").format("DD/MM/YYYY")
-                                                : "Select"}
-                                        </Text>
+                                        <Text style={styles.dateRangeButtonText}>{formattedStartDate}</Text>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={styles.dateTimelineLine} />
                                 <View style={styles.dateFieldWrapper}>
                                     <Text style={styles.dateFieldLabel}>End Date</Text>
                                     <TouchableOpacity
-                                        style={styles.dateButton}
-                                        onPress={() => setShowEndDatePicker(true)}
+                                        style={[styles.dateButton, styles.dateRangeButton]}
+                                        onPress={handleOpenEndDateModal}
                                     >
                                         <Ionicons
                                             name="calendar-outline"
-                                            size={16}
+                                            size={20}
                                             color={colors.text.body}
-                                            style={styles.dateButtonIcon}
+                                            style={styles.dateRangeButtonIcon}
                                         />
-                                        <Text style={styles.dateButtonText}>
-                                            {endDate ? moment(endDate, "YYYY-MM-DD").format("DD/MM/YYYY") : "Select"}
-                                        </Text>
+                                        <Text style={styles.dateRangeButtonText}>{formattedEndDate}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -634,113 +583,48 @@ export function HabitFormScreen() {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Unit Selection Modal */}
-            <Modal
-                visible={showUnitModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowUnitModal(false)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setShowUnitModal(false)}>
-                    <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Unit</Text>
-                            <TouchableOpacity onPress={() => setShowUnitModal(false)} style={styles.modalCloseButton}>
-                                <Text style={styles.modalCloseText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.unitOptionsRow}>
-                            {UNIT_OPTIONS.map((option) => {
-                                const isSelected = unit === option.code;
-                                return (
-                                    <TouchableOpacity
-                                        key={option.code}
-                                        onPress={() => {
-                                            setUnit(option.code);
-                                            setShowUnitModal(false);
-                                        }}
-                                        style={[styles.periodTypeTag, isSelected && styles.periodTypeTagSelected]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.periodTypeTagText,
-                                                isSelected && styles.periodTypeTagTextSelected,
-                                            ]}
-                                        >
-                                            {option.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </View>
-                </Pressable>
-            </Modal>
+            {/* Goal Selection Modal */}
+            <HabitGoalModal
+                modalRef={unitBottomSheetRef}
+                initialValue={value || "1"}
+                initialUnit={unit}
+                onConfirm={(newValue, newUnit) => {
+                    setValue(newValue);
+                    setUnit(newUnit);
+                }}
+            />
 
-            {/* Time Picker */}
-            <TimePicker
-                visible={showTimePicker}
-                value={reminderTime}
-                onClose={() => setShowTimePicker(false)}
+            {/* Reminder Time Modal */}
+            <HabitReminderModal
+                modalRef={reminderTimePickerRef}
+                initialValue={reminderTime}
                 onConfirm={(time) => setReminderTime(time)}
             />
 
-            {/* Start Date Picker */}
-            <DatePicker
-                visible={showStartDatePicker}
-                value={startDate}
-                onClose={() => setShowStartDatePicker(false)}
+            {/* Start Date Modal */}
+            <HabitDateRangeModal
+                modalRef={startDatePickerRef}
+                initialValue={startDate}
                 onConfirm={(date) => setStartDate(date)}
             />
 
-            {/* End Date Picker */}
-            <DatePicker
-                visible={showEndDatePicker}
-                value={endDate || ""}
-                onClose={() => setShowEndDatePicker(false)}
+            {/* End Date Modal */}
+            <HabitDateRangeModal
+                modalRef={endDatePickerRef}
+                initialValue={endDate || ""}
                 onConfirm={(date) => setEndDate(date)}
             />
 
-            {/* Emoji Selection Bottom Sheet */}
-            <BottomSheetModal
-                ref={emojiBottomSheetRef}
-                index={-1}
-                snapPoints={["95%"]}
-                enablePanDownToClose={true}
-                backgroundStyle={styles.emojiBottomSheetBackground}
-                handleIndicatorStyle={styles.emojiBottomSheetIndicator}
-                keyboardBehavior="interactive"
-                keyboardBlurBehavior="restore"
-                android_keyboardInputMode="adjustResize"
-            >
-                <BottomSheetView style={styles.emojiBottomSheetContent}>
-                    {showEmojiModal ? (
-                        <View style={styles.emojiModalContainer}>
-                            <View style={styles.emojiModalHeader}>
-                                <Text style={styles.emojiModalTitle}>Select Emoji</Text>
-                                <TouchableOpacity
-                                    onPress={handleDismissEmojiModal}
-                                    style={styles.emojiModalCloseButton}
-                                >
-                                    <Ionicons name="close" size={24} color={colors.gray[300]} />
-                                </TouchableOpacity>
-                            </View>
-                            <View style={[styles.emojiSelectorContainer, { height: emojiSelectorHeight }]}>
-                                <EmojiSelector
-                                    onEmojiSelected={handleEmojiSelected}
-                                    theme={colors.primary}
-                                    showTabs={true}
-                                    showSearchBar={true}
-                                    showHistory={false}
-                                    columns={8}
-                                    category={Categories.emotion}
-                                    showSectionTitles={false}
-                                />
-                            </View>
-                        </View>
-                    ) : null}
-                </BottomSheetView>
-            </BottomSheetModal>
+            {/* Emoji Selection Modal */}
+            <HabitEmojiModal
+                modalRef={emojiBottomSheetRef}
+                visible={showEmojiModal}
+                onEmojiSelected={(emojiChar) => {
+                    setEmoji(emojiChar);
+                    setShowEmojiModal(false);
+                }}
+                onDismiss={() => setShowEmojiModal(false)}
+            />
         </KeyboardAvoidingView>
     );
 }
@@ -794,6 +678,9 @@ const styles = StyleSheet.create({
     },
     frequencySection: {
         marginBottom: 0,
+    },
+    timeSection: {
+        marginBottom: 1,
     },
     sectionCompact: {
         marginBottom: 0,
@@ -880,32 +767,46 @@ const styles = StyleSheet.create({
         color: colors.white,
         fontWeight: "600",
     },
-    timeTagsRow: {
+    timeCardsRow: {
         flexDirection: "row",
         gap: 8,
         flexWrap: "nowrap",
     },
-    timeTag: {
+    timeCard: {
         flex: 1,
-        paddingHorizontal: 8,
-        paddingVertical: 6,
+        paddingVertical: 16,
+        paddingHorizontal: 4,
         borderRadius: 16,
-        backgroundColor: colors.gray[100],
-        borderWidth: 2,
+        backgroundColor: colors.white,
+        borderWidth: 1,
         borderColor: colors.gray[200],
         alignItems: "center",
         justifyContent: "center",
+        minHeight: 110,
     },
-    timeTagSelected: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
+    timeCardSelected: {
+        backgroundColor: colors.orange.base,
+        borderColor: colors.orange.base,
     },
-    timeTagText: {
+    timeCardIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: colors.white,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 8,
+    },
+    timeCardIconContainerSelected: {
+        backgroundColor: colors.white,
+    },
+    timeCardText: {
         fontSize: 11,
         fontWeight: "500",
         color: colors.text.title,
+        textAlign: "center",
     },
-    timeTagTextSelected: {
+    timeCardTextSelected: {
         color: colors.white,
         fontWeight: "600",
     },
@@ -927,12 +828,7 @@ const styles = StyleSheet.create({
     reminderTimeButton: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: colors.white,
-        borderRadius: 12,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: colors.gray[200],
-        minHeight: 52,
+        justifyContent: "center",
         position: "relative",
     },
     reminderTimeIcon: {
@@ -940,11 +836,11 @@ const styles = StyleSheet.create({
         left: 16,
     },
     reminderTimeButtonText: {
-        flex: 1,
-        fontSize: 16,
+        fontSize: 11,
         fontWeight: "500",
         color: colors.text.title,
         textAlign: "center",
+        flex: 1,
     },
     selectedValuesContainer: {
         marginTop: 12,
@@ -1005,6 +901,43 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: colors.text.title,
     },
+    goalButtonWrapper: {
+        width: "100%",
+        zIndex: 1,
+        marginBottom: 0,
+    },
+    goalSection: {
+        marginBottom: 13,
+    },
+    goalCard: {
+        paddingBottom: 12,
+    },
+    reminderLabelContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    goalButtonFullWidth: {
+        width: "100%",
+    },
+    goalButtonArrow: {
+        marginLeft: 8,
+    },
+    goalButtonContainer: {
+        justifyContent: "center",
+    },
+    goalButtonIcon: {
+        position: "absolute",
+        left: 16,
+    },
+    goalButtonText: {
+        textAlign: "center",
+        flex: 1,
+        fontSize: 11,
+        fontWeight: "500",
+        color: colors.text.title,
+    },
     valueUnitRow: {
         flexDirection: "row",
         gap: 12,
@@ -1029,12 +962,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "500",
         color: colors.text.title,
-    },
-    unitOptionsRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-        justifyContent: "center",
     },
     colorRow: {
         flexDirection: "row",
@@ -1233,46 +1160,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
-    emojiBottomSheetBackground: {
-        backgroundColor: colors.gray[100],
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-    },
-    emojiBottomSheetIndicator: {
-        backgroundColor: colors.gray[300],
-        width: 40,
-    },
-    emojiBottomSheetContent: {
-        flex: 1,
-        paddingHorizontal: 0,
-    },
-    emojiModalContainer: {
-        flex: 1,
-    },
-    emojiSelectorContainer: {
-        width: "100%",
-        paddingBottom: 80,
-    },
-    emojiModalHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: 16,
-        paddingTop: Platform.OS === "ios" ? 10 : 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.gray[200],
-    },
-    emojiModalTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: colors.black,
-    },
-    emojiModalCloseButton: {
-        padding: 3,
-        backgroundColor: colors.gray[200],
-        borderRadius: 20,
-
-    },
     inactiveTag: {
         flexDirection: "row",
         alignItems: "center",
@@ -1332,7 +1219,6 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     dateRangeContainer: {
-        marginTop: 8,
         position: "relative",
     },
     dateRangeRow: {
@@ -1353,6 +1239,23 @@ const styles = StyleSheet.create({
         marginBottom: 6,
         textAlign: "center",
     },
+    dateRangeButton: {
+        justifyContent: "center",
+        width: "85%",
+    },
+    dateRangeButtonIcon: {
+        position: "absolute",
+        left: 16,
+    },
+    dateRangeButtonText: {
+        textAlign: "center",
+        flex: 1,
+        fontSize: 11,
+        fontWeight: "500",
+        color: colors.text.title,
+        paddingLeft: 30,
+        paddingRight: 24,
+    },
     dateButton: {
         flexDirection: "row",
         alignItems: "center",
@@ -1364,13 +1267,13 @@ const styles = StyleSheet.create({
         minHeight: 36,
         position: "relative",
         width: "85%",
+        justifyContent: "space-between",
     },
     dateButtonIcon: {
         position: "absolute",
-        left: 8,
+        left: 0,
     },
     dateButtonText: {
-        flex: 1,
         fontSize: 11,
         fontWeight: "500",
         color: colors.text.title,
@@ -1378,11 +1281,12 @@ const styles = StyleSheet.create({
     },
     dateTimelineLine: {
         position: "absolute",
-        left: "20%",
-        right: "20%",
-        top: 44,
-        height: 2,
-        backgroundColor: colors.gray[200],
+        left: "50%",
+        top: 0,
+        bottom: 0,
+        width: 2,
+        backgroundColor: colors.gray[300],
         zIndex: 0,
+        transform: [{ translateX: -1 }],
     },
 });

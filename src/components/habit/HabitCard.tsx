@@ -1,30 +1,19 @@
 import { colors } from "@/theme/colors";
-import moment from "moment";
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import { Habit } from "../models/Habit";
+import { Habit } from "../../models/Habit";
+import { useHabitCardViewModel } from "../../viewmodels/habit/useHabitCardViewModel";
 
 interface HabitCardProps {
     habit: Habit;
 }
 
 export function HabitCard({ habit }: HabitCardProps) {
-    const formatPeriodType = (type: string) => {
-        switch (type) {
-            case "every_day":
-                return "Every Day";
-            case "specific_days_week":
-                return "Weekly";
-            case "specific_days_month":
-                return "Monthly";
-            default:
-                return type;
-        }
-    };
+    const { formattedPeriodType, formattedStartDate, goalText, isInactive } = useHabitCardViewModel({ habit });
 
     return (
         <View style={[styles.card, { borderLeftColor: habit.color }]}>
-            {!habit.active && (
+            {isInactive && (
                 <View style={styles.inactiveBadge}>
                     <Text style={styles.inactiveText}>Inactive</Text>
                 </View>
@@ -41,24 +30,20 @@ export function HabitCard({ habit }: HabitCardProps) {
             <View style={styles.details}>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Goal:</Text>
-                    <Text style={styles.detailValue}>
-                        {habit.value} {habit.unit}
-                    </Text>
+                    <Text style={styles.detailValue}>{goalText}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Repeat:</Text>
-                    <Text style={styles.detailValue}>{formatPeriodType(habit.period_type)}</Text>
+                    <Text style={styles.detailValue}>{formattedPeriodType}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Time:</Text>
                     <Text style={styles.detailValue}>{habit.period}</Text>
                 </View>
-                {habit.start_date && (
+                {formattedStartDate && (
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Start:</Text>
-                        <Text style={styles.detailValue}>
-                            {moment(habit.start_date, "YYYY-MM-DD").format("DD/MM/YYYY")}
-                        </Text>
+                        <Text style={styles.detailValue}>{formattedStartDate}</Text>
                     </View>
                 )}
             </View>

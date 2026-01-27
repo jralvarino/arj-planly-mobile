@@ -1,3 +1,5 @@
+import { PeriodType, UnitType } from "../utils/constants";
+
 export interface Habit {
     id: string;
     userId: string;
@@ -5,9 +7,9 @@ export interface Habit {
     description?: string;
     color: string;
     emoji: string;
-    unit: "count" | "pg" | "km" | "ml";
+    unit: UnitType;
     value: string;
-    period_type: "every_day" | "specific_days_week" | "specific_days_month";
+    period_type: PeriodType;
     period_value?: string;
     categoryId: string;
     period: "Anytime" | "Morning" | "Afternoon" | "Evening";
