@@ -43,18 +43,24 @@ export default function RootLayout() {
                         <BaseToast
                             {...props}
                             style={{ borderLeftColor: colors.toast.success }}
+                            text1Style={[props.text1Style, { fontSize: 14 }]}
+                            text2Style={[props.text2Style, { fontSize: 12 }]}
                         />
                     ),
                     info: (props) => (
                         <BaseToast
                             {...props}
                             style={{ borderLeftColor: colors.toast.info }}
+                            text1Style={[props.text1Style, { fontSize: 14 }]}
+                            text2Style={[props.text2Style, { fontSize: 12 }]}
                         />
                     ),
                     error: (props) => (
                         <BaseToast
                             {...props}
                             style={{ borderLeftColor: colors.toast.error }}
+                            text1Style={[props.text1Style, { fontSize: 14 }]}
+                            text2Style={[props.text2Style, { fontSize: 12 }]}
                         />
                     ),
                 }}

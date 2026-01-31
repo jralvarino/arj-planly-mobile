@@ -1,10 +1,11 @@
 import { colors } from "@/theme/colors";
-import { PeriodType, WEEK_DAYS } from "@/utils/constants";
+import { PeriodType, PeriodTypeValue, WEEK_DAYS } from "@/utils/constants";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import React from "react";
+import React, { useCallback } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
+    LayoutAnimation,
     Platform,
     ScrollView,
     StyleSheet,
@@ -12,13 +13,18 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    UIManager,
     View,
 } from "react-native";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useHabitFormViewModel } from "../../viewmodels/habit/useHabitFormViewModel";
+import { HabitDateRangeModal } from "./HabitDateRangeModal";
 import { HabitEmojiModal } from "./HabitEmojiModal";
 import { HabitGoalModal } from "./HabitGoalModal";
 import { HabitReminderModal } from "./HabitReminderModal";
-import { HabitDateRangeModal } from "./HabitDateRangeModal";
 
 export function HabitFormScreen() {
     const {
@@ -81,6 +87,14 @@ export function HabitFormScreen() {
         setShowEmojiModal,
     } = useHabitFormViewModel();
 
+    const handleFrequencyTypePress = useCallback(
+        (type: PeriodTypeValue) => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            handlePeriodTypeChange(type);
+        },
+        [handlePeriodTypeChange]
+    );
+
     if (categoriesLoading) {
         return (
             <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -115,10 +129,50 @@ export function HabitFormScreen() {
                     </View>
                 )}
 
-                {/* Section: Basic Information */}
+                {/* Section: Appearance */}
                 <View style={styles.sectionCard}>
+                    <View style={[styles.section, styles.sectionAppearanceTitle, styles.appearanceHeader]}>
+                        <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Appearance</Text>
+                        {isEditMode && (
+                            <View style={styles.appearanceStatusRow}>
+                                <View style={styles.statusToggleContainer}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.statusToggleSegment,
+                                            !active && styles.statusToggleSegmentInactiveSelected,
+                                        ]}
+                                        onPress={() => handleActiveChange(false)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.statusToggleText,
+                                                !active && styles.statusToggleTextInactiveSelected,
+                                            ]}
+                                        >
+                                            Inactive
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleSegment, active && styles.statusToggleSegmentSelected]}
+                                        onPress={() => handleActiveChange(true)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.statusToggleText,
+                                                active && styles.statusToggleTextSelected,
+                                            ]}
+                                        >
+                                            Active
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
                     {/* Title Input */}
-                    <View style={styles.section}>
+                    <View style={[styles.section, styles.sectionTitleToDescription]}>
                         <View style={styles.titleRow}>
                             <TouchableOpacity
                                 style={styles.emojiSelectorIcon}
@@ -190,7 +244,7 @@ export function HabitFormScreen() {
                 {/* Category Card */}
                 <View style={[styles.sectionCard, styles.categoryCard]}>
                     <View style={[styles.section, styles.categorySection]}>
-                        <View style={styles.goalLabelContainer}>
+                        <View style={[styles.goalLabelContainer, styles.categoryLabelContainer]}>
                             <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Category</Text>
                         </View>
                         {categories.length > 0 ? (
@@ -226,12 +280,12 @@ export function HabitFormScreen() {
                 {/* Frequency Type Card */}
                 <View style={[styles.sectionCard, styles.frequencyCard]}>
                     <View style={[styles.section, styles.frequencySection]}>
-                        <View style={styles.goalLabelContainer}>
+                        <View style={[styles.goalLabelContainer, styles.frequencyLabelContainer]}>
                             <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Frequency</Text>
                         </View>
                         <View style={styles.periodTypeScrollContainer}>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange(PeriodType.EVERY_DAY)}
+                                onPress={() => handleFrequencyTypePress(PeriodType.EVERY_DAY)}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === PeriodType.EVERY_DAY && styles.periodTypeTagSelected,
@@ -248,7 +302,7 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange(PeriodType.WEEKLY)}
+                                onPress={() => handleFrequencyTypePress(PeriodType.WEEKLY)}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === PeriodType.WEEKLY && styles.periodTypeTagSelected,
@@ -265,7 +319,7 @@ export function HabitFormScreen() {
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={() => handlePeriodTypeChange(PeriodType.MONTHLY)}
+                                onPress={() => handleFrequencyTypePress(PeriodType.MONTHLY)}
                                 style={[
                                     styles.periodTypeTag,
                                     periodType === PeriodType.MONTHLY && styles.periodTypeTagSelected,
@@ -493,9 +547,7 @@ export function HabitFormScreen() {
                                         color={colors.text.body}
                                         style={styles.reminderTimeIcon}
                                     />
-                                    <Text style={styles.reminderTimeButtonText}>
-                                        {reminderTime || "Select time"}
-                                    </Text>
+                                    <Text style={styles.reminderTimeButtonText}>{reminderTime || "Select time"}</Text>
                                     <Ionicons
                                         name="chevron-forward"
                                         size={16}
@@ -553,23 +605,6 @@ export function HabitFormScreen() {
                         </View>
                     </View>
                 </View>
-
-                {/* Active Card - Only show in edit mode */}
-                {isEditMode && (
-                    <View style={[styles.sectionCard, styles.sectionCardCompact]}>
-                        <View style={[styles.section, styles.sectionCompact]}>
-                            <View style={styles.statusHeader}>
-                                <Text style={[styles.sectionTitle, styles.sectionTitleCompact]}>Status</Text>
-                                <Switch
-                                    value={active}
-                                    onValueChange={handleActiveChange}
-                                    trackColor={{ false: colors.gray[200], true: colors.primary }}
-                                    thumbColor="white"
-                                />
-                            </View>
-                        </View>
-                    </View>
-                )}
 
                 {/* Save Button */}
                 <TouchableOpacity
@@ -662,12 +697,12 @@ const styles = StyleSheet.create({
             },
         }),
     },
-    sectionCardCompact: {
-        padding: 12,
-    },
     categoryCard: {
         paddingTop: 12,
-        paddingBottom: 20,
+        paddingBottom: 20
+    },
+    categoryLabelContainer: {
+        marginBottom: 12,
     },
     categorySection: {
         marginTop: 0,
@@ -676,28 +711,72 @@ const styles = StyleSheet.create({
     frequencyCard: {
         paddingBottom: 20,
     },
+    frequencyLabelContainer: {
+        marginBottom: 12,
+    },
     frequencySection: {
         marginBottom: 0,
     },
     timeSection: {
         marginBottom: 1,
     },
-    sectionCompact: {
-        marginBottom: 0,
-    },
-    statusHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-    },
     section: {
         marginBottom: 20,
     },
+    sectionTitleToDescription: {
+        marginBottom: 20,
+    },
+    sectionAppearanceTitle: {
+        marginBottom: 20,
+    },
+    appearanceHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    appearanceStatusRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    statusToggleContainer: {
+        flexDirection: "row",
+        borderRadius: 14,
+        backgroundColor: colors.gray[200],
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: colors.gray[200],
+    },
+    statusToggleSegment: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        minWidth: 44,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    statusToggleSegmentSelected: {
+        backgroundColor: colors.primary,
+    },
+    statusToggleSegmentInactiveSelected: {
+        backgroundColor: colors.warning.light,
+    },
+    statusToggleText: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: colors.text.body,
+    },
+    statusToggleTextSelected: {
+        color: colors.white,
+        fontWeight: "600",
+    },
+    statusToggleTextInactiveSelected: {
+        color: colors.warning.text,
+        fontWeight: "600",
+    },
     sectionTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        color: colors.text.title,
+        fontWeight: "500",
+        color: colors.text.body,
         marginBottom: 12,
     },
     sectionTitleCompact: {
@@ -894,12 +973,12 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        marginBottom: 12,
+        marginBottom: 20,
     },
     goalLabel: {
         fontSize: 16,
-        fontWeight: "600",
-        color: colors.text.title,
+        fontWeight: "500",
+        color: colors.text.body,
     },
     goalButtonWrapper: {
         width: "100%",
@@ -916,7 +995,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 12,
+        marginBottom: 20,
     },
     goalButtonFullWidth: {
         width: "100%",

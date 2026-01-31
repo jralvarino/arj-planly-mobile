@@ -5,7 +5,8 @@ import Toast from "react-native-toast-message";
 import { Category } from "../../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../../models/Todo";
 import { getAllCategories } from "../../service/category.service";
-import { getTodosByDate, updateTodoStatus, updateTodoNotes } from "../../service/todo.service";
+import { getTodosByDate, updateTodoNotes, updateTodoStatus } from "../../service/todo.service";
+import { useStreakStore } from "../../stores/streakStore";
 
 const getTodayDate = (): string => {
     // Usa o timezone local em vez de UTC para evitar problemas de timezone
@@ -35,11 +36,11 @@ export function useTodoViewModel() {
                     allowsRecordingIOS: false,
                     staysActiveInBackground: false,
                 });
-                
+
                 // Carrega o som padrão de todo completado
                 const { sound } = await Audio.Sound.createAsync(require("../../../assets/sounds/todo-completed.mp3"));
                 soundRef.current = sound;
-                
+
                 // Carrega o som de trombetas para quando o último todo é completado
                 const { sound: trumpetsSound } = await Audio.Sound.createAsync(
                     require("../../../assets/sounds/trumpets-completed.mp3")
@@ -204,6 +205,10 @@ export function useTodoViewModel() {
             // Chama o backend em background (não bloqueia a UI)
             updateTodoStatus(todoId, targetDate, newStatus, progressValue)
                 .then(() => {
+                    // Atualiza global streak quando todos completam ou quando um todo é desmarcado
+                    if (isLastTodo || newStatus === TODO_STATUS.PENDING) {
+                        useStreakStore.getState().fetchGlobalStreak();
+                    }
                     // Sincroniza com o backend para garantir consistência usando a data selecionada
                     getTodosByDate(targetDate)
                         .then((data) => {
@@ -328,9 +333,7 @@ export function useTodoViewModel() {
                     // Reverte a mudança otimista em caso de erro
                     setTodos((prevTodos) => {
                         const updatedTodos = prevTodos.map((todo) =>
-                            todo.id === todoId
-                                ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0" }
-                                : todo
+                            todo.id === todoId ? { ...todo, status: TODO_STATUS.SKIPPED, progressValue: "0" } : todo
                         );
                         const sortedData = sortTodos(updatedTodos);
                         todosRef.current = sortedData;
@@ -348,13 +351,7 @@ export function useTodoViewModel() {
     );
 
     const handleSkipTodoWithConfirmation = useCallback(
-        (
-            todoId: string,
-            todoTitle: string,
-            currentStatus: TodoStatus,
-            progressValue: string,
-            date?: string
-        ) => {
+        (todoId: string, todoTitle: string, currentStatus: TodoStatus, progressValue: string, date?: string) => {
             // Se o status for skipped, faz undo (volta para pending)
             if (currentStatus === TODO_STATUS.SKIPPED) {
                 handleUndoSkip(todoId, date);
@@ -500,9 +497,7 @@ export function useTodoViewModel() {
 
             // Atualiza o estado local imediatamente (otimistic update)
             setTodos((prevTodos) => {
-                const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, notes } : todo
-                );
+                const updatedTodos = prevTodos.map((todo) => (todo.id === todoId ? { ...todo, notes } : todo));
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
                 return sortedData;

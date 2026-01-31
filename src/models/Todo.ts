@@ -20,4 +20,5 @@ export interface Todo {
     progressValue: string;
     skiped: boolean;
     notes?: string;
+    streak: string;
 }

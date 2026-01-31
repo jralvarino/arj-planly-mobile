@@ -155,7 +155,7 @@ export function useHabitFormViewModel() {
     }, []);
 
     const handleSubmit = useCallback(async () => {
-        // Validation
+        // Validation - required fields (description and end date are optional)
         if (!title.trim()) {
             Toast.show({
                 type: "error",
@@ -165,11 +165,65 @@ export function useHabitFormViewModel() {
             return;
         }
 
+        if (!emoji.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select an emoji.",
+            });
+            return;
+        }
+
         if (!categoryId) {
             Toast.show({
                 type: "error",
                 text1: "Validation Error",
                 text2: "Please select a category.",
+            });
+            return;
+        }
+
+        if (!value.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please enter a goal value.",
+            });
+            return;
+        }
+
+        if (periodType === PeriodType.WEEKLY && !periodValue.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select at least one day when frequency is Weekly.",
+            });
+            return;
+        }
+
+        if (periodType === PeriodType.MONTHLY && !periodValue.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select at least one day when frequency is Monthly.",
+            });
+            return;
+        }
+
+        if (reminderEnabled && !reminderTime.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select a reminder time when reminder is enabled.",
+            });
+            return;
+        }
+
+        if (!startDate.trim()) {
+            Toast.show({
+                type: "error",
+                text1: "Validation Error",
+                text2: "Please select a start date.",
             });
             return;
         }

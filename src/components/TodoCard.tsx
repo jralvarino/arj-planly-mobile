@@ -329,6 +329,12 @@ export function TodoCard({
                                     {localTodo.title}
                                 </Text>
                                 <View style={styles.tagsContainer}>
+                                    {localTodo.streak && localTodo.streak !== "0" && (
+                                        <View style={styles.streakTag}>
+                                            <Ionicons name="flame" size={12} color={colors.orange.base} />
+                                            <Text style={styles.streakTagText}>{localTodo.streak}</Text>
+                                        </View>
+                                    )}
                                     <View style={styles.tag}>
                                         <Text style={styles.tagText}>
                                             {localTodo.progressValue} / {localTodo.targetValue}
@@ -382,6 +388,7 @@ export function TodoCard({
                                     onToggle?.(localTodo.id, localTodo.status, localTodo.progressValue, selectedDate);
                                 }}
                                 style={[styles.checkButton, isDone && styles.checkButtonDone]}
+                                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                                 disabled={isSkipped}
                             >
                                 {isSkipped ? (
@@ -484,9 +491,9 @@ export function TodoCard({
 const styles = StyleSheet.create({
     card: {
         borderRadius: 12,
-        paddingVertical: 10,
+        paddingVertical: 13,
         paddingHorizontal: 9,
-        marginBottom: 11,
+        marginBottom: 10,
         borderLeftWidth: 4,
         position: "relative",
     },
@@ -532,8 +539,8 @@ const styles = StyleSheet.create({
     tagsContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 4,
-        marginTop: 6, //espaço entre o titulo e as tags para separar melhor
+        gap: 3,
+        marginTop: 4, //espaço entre o titulo e as tags para separar melhor
     },
     metaContainer: {
         position: "absolute",
@@ -544,6 +551,21 @@ const styles = StyleSheet.create({
         gap: 8,
         zIndex: 10,
     },
+    streakTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 3,
+        backgroundColor: colors.orange.light,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 7,
+
+    },
+    streakTagText: {
+        fontSize: 10,
+        fontWeight: "600",
+        color: colors.orange.base,
+    },
     tag: {
         backgroundColor: colors.gray[100],
         paddingHorizontal: 8,
@@ -551,7 +573,7 @@ const styles = StyleSheet.create({
         borderRadius: 7,
     },
     tagText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: "500",
         color: colors.text.body,
     },

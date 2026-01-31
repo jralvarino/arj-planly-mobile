@@ -1,23 +1,16 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
 import { useCallback, useEffect } from "react";
-import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { TodoCard } from "../../components/TodoCard";
 import { WeekCarousel } from "../../components/WeekCarousel";
+import { useStreakStore } from "../../stores/streakStore";
 import { colors } from "../../theme/colors";
-import { getTodayDate, headerTitleComponent } from "../../utils/dateUtils";
-import { useHomeViewModel } from "../../viewmodels/home/useHomeViewModel";
+import { headerTitleComponent } from "../../utils/dateUtils";
 import { useHomeScreenViewModel } from "../../viewmodels/home/useHomeScreenViewModel";
+import { useHomeViewModel } from "../../viewmodels/home/useHomeViewModel";
 import { useTodoViewModel } from "../../viewmodels/todo/useTodoViewModel";
 
 const TAB_BAR_HEIGHT = 72;
@@ -39,7 +32,7 @@ export default function HomeScreen() {
         handleSaveTodo,
         handleSaveNotes,
     } = useTodoViewModel();
-    
+
     // ViewModel para gerenciar estado da tela (filtros, datas, separadores)
     const {
         selectedCategoryId,
@@ -49,19 +42,21 @@ export default function HomeScreen() {
         filteredTodos,
         getItemSeparatorInfo,
     } = useHomeScreenViewModel({ todos });
-    
+
     // ViewModel para gerenciar weekSummary e lógica relacionada
     const { weekSummary, handleWeekChange } = useHomeViewModel({
         todos,
         selectedDate,
     });
 
-    // Atualiza a lista quando a tab recebe foco
+    const { globalStreak, fetchGlobalStreak } = useStreakStore();
+
+    // Atualiza a lista e o global streak quando a tab recebe foco
     useFocusEffect(
         useCallback(() => {
-            // Busca categorias quando a tela recebe foco
             handleFocus();
-        }, [handleFocus])
+            fetchGlobalStreak();
+        }, [handleFocus, fetchGlobalStreak])
     );
 
     // Atualiza o título do header quando a data selecionada muda
@@ -77,11 +72,11 @@ export default function HomeScreen() {
             headerRight: () => (
                 <View style={styles.streakTag}>
                     <Ionicons name="flame" size={16} color={colors.orange.base} />
-                    <Text style={styles.streakText}>1 day</Text>
+                    <Text style={styles.streakText}>{globalStreak}</Text>
                 </View>
             ),
         });
-    }, [selectedDate, navigation]);
+    }, [selectedDate, navigation, globalStreak]);
 
     // Busca todos quando a data selecionada muda ou na inicialização
     useEffect(() => {
@@ -124,25 +119,24 @@ export default function HomeScreen() {
                             handleToggleTodo(todoId, status, progressValue, date || selectedDate)
                         }
                         onSkip={(todoId, title, status, progressValue, date) =>
-                            handleSkipTodoWithConfirmation(
-                                todoId,
-                                title,
-                                status,
-                                progressValue,
-                                date || selectedDate
-                            )
+                            handleSkipTodoWithConfirmation(todoId, title, status, progressValue, date || selectedDate)
                         }
                         onSave={(todoId, status, progressValue, date) =>
                             handleSaveTodo(todoId, status, progressValue, date || selectedDate)
                         }
-                        onSaveNotes={(todoId, notes, date) =>
-                            handleSaveNotes(todoId, notes, date || selectedDate)
-                        }
+                        onSaveNotes={(todoId, notes, date) => handleSaveNotes(todoId, notes, date || selectedDate)}
                     />
                 </>
             );
         },
-        [handleToggleTodo, handleSkipTodoWithConfirmation, handleSaveTodo, categories, filteredTodos, getItemSeparatorInfo]
+        [
+            handleToggleTodo,
+            handleSkipTodoWithConfirmation,
+            handleSaveTodo,
+            categories,
+            filteredTodos,
+            getItemSeparatorInfo,
+        ]
     );
 
     const renderEmpty = useCallback(() => {
