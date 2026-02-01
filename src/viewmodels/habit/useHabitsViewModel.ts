@@ -5,6 +5,10 @@ import Toast from "react-native-toast-message";
 import { Habit } from "../../models/Habit";
 import { useHomeStore } from "../../stores/homeStore";
 import { useStreakStore } from "../../stores/streakStore";
+import {
+    cancelHabitReminders,
+    scheduleHabitReminders,
+} from "../../service/notification.service";
 import { deleteHabit, getAllHabits, updateHabit } from "../../service/habit.service";
 import { getAllCategories } from "../../service/category.service";
 import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
@@ -89,9 +93,10 @@ export function useHabitsViewModel() {
 
     const confirmDelete = useCallback(async () => {
         if (!habitToDelete) return;
-        
+
         setDeleteDialogVisible(false);
         try {
+            await cancelHabitReminders(habitToDelete.id);
             await deleteHabit(habitToDelete.id);
             await fetchHabits();
             setHabitToDelete(null);
@@ -128,7 +133,11 @@ export function useHabitsViewModel() {
                     updateData.end_date = undefined;
                 }
                 
-                await updateHabit(habit.id, updateData);
+                const updatedHabit = await updateHabit(habit.id, updateData);
+                await cancelHabitReminders(habit.id);
+                if (newActiveStatus && updatedHabit.reminder_enabled) {
+                    await scheduleHabitReminders(updatedHabit);
+                }
                 await fetchHabits();
                 useStreakStore.getState().fetchGlobalStreak();
                 useHomeStore.getState().invalidateSummary();

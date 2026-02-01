@@ -10,6 +10,10 @@ import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
 import { useHomeStore } from "../../stores/homeStore";
 import { useStreakStore } from "../../stores/streakStore";
+import {
+    cancelHabitReminders,
+    scheduleHabitReminders,
+} from "../../service/notification.service";
 import { createHabit, getHabitById, updateHabit } from "../../service/habit.service";
 import { UnitType, PeriodType as PeriodTypeValue, PeriodType, UNIT_OPTIONS } from "../../utils/constants";
 
@@ -255,7 +259,11 @@ export function useHabitFormViewModel() {
             };
 
             if (isEditMode && params.id) {
-                await updateHabit(params.id, habitData);
+                const habit = await updateHabit(params.id, habitData);
+                await cancelHabitReminders(params.id);
+                if (habit.reminder_enabled) {
+                    await scheduleHabitReminders(habit);
+                }
                 Toast.show({
                     type: "success",
                     text1: "Success",
@@ -265,7 +273,10 @@ export function useHabitFormViewModel() {
                 useHomeStore.getState().invalidateSummary();
                 setTimeout(() => router.back(), 1500);
             } else {
-                await createHabit(habitData);
+                const habit = await createHabit(habitData);
+                if (habit.reminder_enabled) {
+                    await scheduleHabitReminders(habit);
+                }
                 Toast.show({
                     type: "success",
                     text1: "Success",
