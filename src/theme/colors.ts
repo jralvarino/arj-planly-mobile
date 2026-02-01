@@ -33,6 +33,7 @@ export interface Colors {
         text: string;
     };
     success: string;
+    successLight: string;
     overlay: {
         white: string;
         white90: string;
@@ -111,6 +112,7 @@ export const colors: Colors = {
         text: "#92400E",
     },
     success: "#10B981",
+    successLight: "#d6fce9",
     overlay: {
         white: "rgba(255, 255, 255, 0.5)",
         white90: "rgba(255, 255, 255, 0.9)",

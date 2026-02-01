@@ -329,7 +329,7 @@ export function TodoCard({
                                     {localTodo.title}
                                 </Text>
                                 <View style={styles.tagsContainer}>
-                                    {localTodo.streak && localTodo.streak !== "0" && (
+                                    {Boolean(localTodo.streak && String(localTodo.streak) !== "0") && (
                                         <View style={styles.streakTag}>
                                             <Ionicons name="flame" size={12} color={colors.orange.base} />
                                             <Text style={styles.streakTagText}>{localTodo.streak}</Text>

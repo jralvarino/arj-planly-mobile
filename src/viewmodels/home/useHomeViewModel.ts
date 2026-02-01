@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LayoutAnimation, Platform, UIManager } from "react-native";
+import { useHomeStore } from "../../stores/homeStore";
 import { CategorySummary, DaySummary, WeekSummary } from "../../interfaces/todo/summary.interface";
 import { TODO_STATUS, Todo } from "../../models/Todo";
 import { getTodoSummary } from "../../service/todo.service";
@@ -361,6 +362,15 @@ export function useHomeViewModel({ todos, selectedDate }: UseHomeViewModelProps)
         fetchWeekSummary(startDateStr, endDateStr);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Refaz getTodoSummary quando um novo hábito é criado (invalidateSummary chamado)
+    const summaryRefreshTrigger = useHomeStore((s) => s.summaryRefreshTrigger);
+    useEffect(() => {
+        if (summaryRefreshTrigger > 0) {
+            const { startDate, endDate } = getWeekRangeFromDate(selectedDate);
+            fetchWeekSummary(startDate, endDate, true);
+        }
+    }, [summaryRefreshTrigger, selectedDate, fetchWeekSummary]);
 
     return {
         weekSummary,

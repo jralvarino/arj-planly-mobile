@@ -3,6 +3,8 @@ import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import Toast from "react-native-toast-message";
 import { Habit } from "../../models/Habit";
+import { useHomeStore } from "../../stores/homeStore";
+import { useStreakStore } from "../../stores/streakStore";
 import { deleteHabit, getAllHabits, updateHabit } from "../../service/habit.service";
 import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
@@ -72,6 +74,8 @@ export function useHabitsViewModel() {
             await deleteHabit(habitToDelete.id);
             await fetchHabits();
             setHabitToDelete(null);
+            useStreakStore.getState().fetchGlobalStreak();
+            useHomeStore.getState().invalidateSummary();
         } catch (error) {
             console.error("Error deleting habit:", error);
             Toast.show({
@@ -105,6 +109,8 @@ export function useHabitsViewModel() {
                 
                 await updateHabit(habit.id, updateData);
                 await fetchHabits();
+                useStreakStore.getState().fetchGlobalStreak();
+                useHomeStore.getState().invalidateSummary();
             } catch (error) {
                 console.error("Error updating habit:", error);
                 Toast.show({

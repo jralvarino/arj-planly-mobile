@@ -79,7 +79,11 @@ export default function TabsLayout() {
                     name="statistics"
                     options={{
                         tabBarShowLabel: false,
-                        headerTitle: "Statistics",
+                        headerTitle: () => (
+                            <View style={styles.headerTitleContainer}>
+                                <Text style={styles.headerTitleText}>Statistics</Text>
+                            </View>
+                        ),
                         tabBarLabel: "Statistics",
                         tabBarIcon: ({ focused, color }) => (
                             <View>

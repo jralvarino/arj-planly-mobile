@@ -8,6 +8,8 @@ import BottomSheetModal from "@gorhom/bottom-sheet";
 import { colors } from "../../theme/colors";
 import { Category } from "../../models/Category";
 import { getAllCategories } from "../../service/category.service";
+import { useHomeStore } from "../../stores/homeStore";
+import { useStreakStore } from "../../stores/streakStore";
 import { createHabit, getHabitById, updateHabit } from "../../service/habit.service";
 import { UnitType, PeriodType as PeriodTypeValue, PeriodType, UNIT_OPTIONS } from "../../utils/constants";
 
@@ -259,6 +261,8 @@ export function useHabitFormViewModel() {
                     text1: "Success",
                     text2: "Habit updated successfully.",
                 });
+                useStreakStore.getState().fetchGlobalStreak();
+                useHomeStore.getState().invalidateSummary();
                 setTimeout(() => router.back(), 1500);
             } else {
                 await createHabit(habitData);
@@ -267,6 +271,8 @@ export function useHabitFormViewModel() {
                     text1: "Success",
                     text2: "Habit created successfully.",
                 });
+                useStreakStore.getState().fetchGlobalStreak();
+                useHomeStore.getState().invalidateSummary();
                 setTimeout(() => router.back(), 1500);
             }
         } catch (err: any) {
