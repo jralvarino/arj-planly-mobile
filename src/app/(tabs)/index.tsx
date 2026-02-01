@@ -181,11 +181,13 @@ export default function HomeScreen() {
             />
 
             {/* Filtro de Categorias */}
-            <CategoryFilter
-                categories={categories}
-                selectedCategoryId={selectedCategoryId}
-                onCategorySelect={setSelectedCategoryId}
-            />
+            <View style={styles.categoryFilterWrapper}>
+                <CategoryFilter
+                    categories={categories}
+                    selectedCategoryId={selectedCategoryId}
+                    onCategorySelect={setSelectedCategoryId}
+                />
+            </View>
 
             <FlatList
                 data={filteredTodos}
@@ -256,6 +258,9 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.primary,
         fontWeight: "500",
+    },
+    categoryFilterWrapper: {
+        marginBottom: -8,
     },
     listContent: {
         padding: 10,

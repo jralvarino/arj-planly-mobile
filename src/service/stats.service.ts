@@ -46,6 +46,7 @@ export const getGlobalStreak = async (): Promise<string> => {
 export interface GetDashboardParams {
     month: string;
     categoryId?: string;
+    habitId?: string;
     selectedDate?: string;
 }
 
@@ -53,9 +54,10 @@ export const getDashboard = async (
     params: GetDashboardParams,
     signal?: AbortSignal
 ): Promise<DashboardResponse> => {
-    const { month, categoryId, selectedDate } = params;
+    const { month, categoryId, habitId, selectedDate } = params;
     const searchParams = new URLSearchParams({ month });
     if (categoryId) searchParams.set("categoryId", categoryId);
+    if (habitId) searchParams.set("habitId", habitId);
     if (selectedDate) searchParams.set("selectedDate", selectedDate);
 
     const { data } = await planlyApiClient.get<DashboardResponse>(

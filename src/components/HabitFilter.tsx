@@ -1,40 +1,36 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Category } from "../models/Category";
+import { Habit } from "../models/Habit";
 import { colors } from "../theme/colors";
 
-interface CategoryFilterProps {
-    categories: Category[];
-    selectedCategoryId: string | null;
-    onCategorySelect: (categoryId: string | null) => void;
+interface HabitFilterProps {
+    habits: Habit[];
+    selectedHabitId: string | null;
+    onHabitSelect: (habitId: string | null) => void;
 }
 
-export function CategoryFilter({
-    categories,
-    selectedCategoryId,
-    onCategorySelect,
-}: CategoryFilterProps) {
+export function HabitFilter({ habits, selectedHabitId, onHabitSelect }: HabitFilterProps) {
     const [expanded, setExpanded] = useState(false);
 
-    const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
-    const displayLabel = selectedCategory ? selectedCategory.name : "All categories";
+    const selectedHabit = habits.find((h) => h.id === selectedHabitId);
+    const displayLabel = selectedHabit ? `${selectedHabit.emoji} ${selectedHabit.title}` : "All habits";
 
     const handleToggleExpand = useCallback(() => {
         setExpanded((prev) => !prev);
     }, []);
 
     const handleSelectAll = useCallback(() => {
-        onCategorySelect(null);
+        onHabitSelect(null);
         setExpanded(false);
-    }, [onCategorySelect]);
+    }, [onHabitSelect]);
 
-    const handleSelectCategory = useCallback(
-        (categoryId: string) => {
-            onCategorySelect(categoryId);
+    const handleSelectHabit = useCallback(
+        (habitId: string) => {
+            onHabitSelect(habitId);
             setExpanded(false);
         },
-        [onCategorySelect]
+        [onHabitSelect]
     );
 
     return (
@@ -61,39 +57,36 @@ export function CategoryFilter({
                         style={styles.listScroll}
                     >
                         <Pressable
-                            style={[
-                                styles.option,
-                                selectedCategoryId === null && styles.optionSelected,
-                            ]}
+                            style={[styles.option, selectedHabitId === null && styles.optionSelected]}
                             onPress={handleSelectAll}
                         >
                             <Text
                                 style={[
                                     styles.optionText,
-                                    selectedCategoryId === null && styles.optionTextSelected,
+                                    selectedHabitId === null && styles.optionTextSelected,
                                 ]}
                             >
-                                All categories
+                                All habits
                             </Text>
                         </Pressable>
-                        {categories.map((category) => (
+                        {habits.map((habit) => (
                             <Pressable
-                                key={category.id}
+                                key={habit.id}
                                 style={[
                                     styles.option,
-                                    selectedCategoryId === category.id && styles.optionSelected,
+                                    selectedHabitId === habit.id && styles.optionSelected,
                                 ]}
-                                onPress={() => handleSelectCategory(category.id)}
+                                onPress={() => handleSelectHabit(habit.id)}
                             >
+                                <Text style={styles.optionEmoji}>{habit.emoji}</Text>
                                 <Text
                                     style={[
                                         styles.optionText,
-                                        selectedCategoryId === category.id &&
-                                            styles.optionTextSelected,
+                                        selectedHabitId === habit.id && styles.optionTextSelected,
                                     ]}
                                     numberOfLines={1}
                                 >
-                                    {category.name}
+                                    {habit.title}
                                 </Text>
                             </Pressable>
                         ))}
@@ -145,6 +138,10 @@ const styles = StyleSheet.create({
     },
     optionSelected: {
         backgroundColor: colors.primaryLight,
+    },
+    optionEmoji: {
+        fontSize: 14,
+        marginRight: 8,
     },
     optionText: {
         fontSize: 12,

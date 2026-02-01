@@ -1,24 +1,35 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import React from "react";
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Dialog, Button, Portal } from "react-native-paper";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
+import { CategoryFilter } from "../../components/CategoryFilter";
 import { HabitCard } from "../../components/habit/HabitCard";
 import { Habit } from "../../models/Habit";
 import { colors } from "../../theme/colors";
 import { useHabitsViewModel } from "../../viewmodels/habit/useHabitsViewModel";
+import type { FilterType } from "../../viewmodels/habit/useHabitsViewModel";
+
+const STATUS_LABELS: Record<FilterType, string> = {
+    all: "All",
+    active: "Active",
+    inactive: "Inactive",
+};
 
 export default function HabitsListScreen() {
     const {
         habits,
+        categories,
+        selectedCategoryId,
         loading,
         filter,
         swipeableRefs,
         deleteDialogVisible,
         habitToDelete,
         setFilter,
+        handleCategorySelect,
         handleHabitPress,
         handleEdit,
         handleDelete,
@@ -26,6 +37,19 @@ export default function HabitsListScreen() {
         confirmDelete,
         cancelDelete,
     } = useHabitsViewModel();
+
+    const [statusExpanded, setStatusExpanded] = useState(false);
+    const statusDisplayLabel = STATUS_LABELS[filter];
+    const handleStatusToggle = useCallback(() => {
+        setStatusExpanded((prev) => !prev);
+    }, []);
+    const handleSelectStatus = useCallback(
+        (value: FilterType) => {
+            setFilter(value);
+            setStatusExpanded(false);
+        },
+        [setFilter]
+    );
 
     const renderRightActions = (habit: Habit, progress: SharedValue<number>) => {
         const animatedStyle = useAnimatedStyle(() => {
@@ -69,38 +93,55 @@ export default function HabitsListScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Filter Tabs */}
-            <View style={styles.filterContainer}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterScroll}
-                >
-                    <TouchableOpacity
-                        style={[styles.filterTag, filter === "all" && styles.filterTagSelected]}
-                        onPress={() => setFilter("all")}
-                    >
-                        <Text style={[styles.filterTagText, filter === "all" && styles.filterTagTextSelected]}>
-                            All
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.filterTag, filter === "active" && styles.filterTagSelected]}
-                        onPress={() => setFilter("active")}
-                    >
-                        <Text style={[styles.filterTagText, filter === "active" && styles.filterTagTextSelected]}>
-                            Active
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.filterTag, filter === "inactive" && styles.filterTagSelected]}
-                        onPress={() => setFilter("inactive")}
-                    >
-                        <Text style={[styles.filterTagText, filter === "inactive" && styles.filterTagTextSelected]}>
-                            Inactive
-                        </Text>
-                    </TouchableOpacity>
-                </ScrollView>
+            <View style={styles.filtersRow}>
+                <View style={styles.filterItem}>
+                    <CategoryFilter
+                        categories={categories}
+                        selectedCategoryId={selectedCategoryId}
+                        onCategorySelect={handleCategorySelect}
+                    />
+                </View>
+                <View style={styles.filterItem}>
+                    <View style={styles.statusFilterContainer}>
+                        <Pressable
+                            style={styles.statusFilterTrigger}
+                            onPress={handleStatusToggle}
+                            android_ripple={{ color: colors.gray[200] }}
+                        >
+                            <Text style={styles.statusFilterTriggerValue} numberOfLines={1}>
+                                {statusDisplayLabel}
+                            </Text>
+                            <Ionicons
+                                name={statusExpanded ? "chevron-up" : "chevron-down"}
+                                size={20}
+                                color={colors.text.body}
+                            />
+                        </Pressable>
+                        {statusExpanded && (
+                            <View style={styles.statusFilterList}>
+                                {(["all", "active", "inactive"] as const).map((value) => (
+                                    <Pressable
+                                        key={value}
+                                        style={[
+                                            styles.statusFilterOption,
+                                            filter === value && styles.statusFilterOptionSelected,
+                                        ]}
+                                        onPress={() => handleSelectStatus(value)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.statusFilterOptionText,
+                                                filter === value && styles.statusFilterOptionTextSelected,
+                                            ]}
+                                        >
+                                            {STATUS_LABELS[value]}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </View>
             </View>
 
             <FlatList
@@ -158,8 +199,67 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    filtersRow: {
+        flexDirection: "row",
+        gap: 8,
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 1,
+        backgroundColor: colors.background,
+    },
+    filterItem: {
+        flex: 1,
+    },
+    statusFilterContainer: {
+        marginBottom: 1,
+        backgroundColor: colors.white,
+        borderRadius: 12,
+        overflow: "hidden",
+    },
+    statusFilterTrigger: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+    },
+    statusFilterTriggerValue: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.text.title,
+        flex: 1,
+        marginRight: 8,
+    },
+    statusFilterList: {
+        borderTopWidth: 1,
+        borderTopColor: colors.gray[200],
+        paddingVertical: 4,
+        paddingHorizontal: 12,
+    },
+    statusFilterOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        marginBottom: 2,
+    },
+    statusFilterOptionSelected: {
+        backgroundColor: colors.primaryLight,
+    },
+    statusFilterOptionText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: colors.text.title,
+        flex: 1,
+    },
+    statusFilterOptionTextSelected: {
+        color: colors.primary,
+        fontWeight: "600",
+    },
     listContent: {
-        padding: 16,
+        paddingTop: 1,
+        paddingHorizontal: 16,
         paddingBottom: 100,
     },
     listContentEmpty: {
@@ -195,37 +295,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.text.body,
         textAlign: "center",
-    },
-    filterContainer: {
-        backgroundColor: colors.white,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.gray[200],
-    },
-    filterScroll: {
-        gap: 8,
-    },
-    filterTag: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        backgroundColor: colors.gray[100],
-        borderWidth: 2,
-        borderColor: colors.gray[200],
-        marginRight: 8,
-    },
-    filterTagSelected: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
-    },
-    filterTagText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.text.title,
-    },
-    filterTagTextSelected: {
-        color: colors.white,
     },
     rightActions: {
         width: 240,

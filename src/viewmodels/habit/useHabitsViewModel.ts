@@ -1,18 +1,22 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Toast from "react-native-toast-message";
 import { Habit } from "../../models/Habit";
 import { useHomeStore } from "../../stores/homeStore";
 import { useStreakStore } from "../../stores/streakStore";
 import { deleteHabit, getAllHabits, updateHabit } from "../../service/habit.service";
+import { getAllCategories } from "../../service/category.service";
 import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+import type { Category } from "../../models/Category";
 
 export type FilterType = "all" | "active" | "inactive";
 
 export function useHabitsViewModel() {
     const router = useRouter();
     const [habits, setHabits] = useState<Habit[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>("active");
     const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -35,6 +39,23 @@ export function useHabitsViewModel() {
             setLoading(false);
         }
     }, []);
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            const data = await getAllCategories();
+            setCategories(data);
+        } catch (err) {
+            console.error("Error fetching categories:", err);
+        }
+    }, []);
+
+    const handleCategorySelect = useCallback((categoryId: string | null) => {
+        setSelectedCategoryId(categoryId);
+    }, []);
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
 
     useFocusEffect(
         useCallback(() => {
@@ -129,9 +150,16 @@ export function useHabitsViewModel() {
         return true;
     });
 
+    const habitsByCategory =
+        selectedCategoryId == null
+            ? filteredHabits
+            : filteredHabits.filter((habit) => habit.categoryId === selectedCategoryId);
+
     return {
         // State
-        habits: filteredHabits,
+        habits: habitsByCategory,
+        categories,
+        selectedCategoryId,
         loading,
         filter,
         swipeableRefs,
@@ -140,6 +168,7 @@ export function useHabitsViewModel() {
 
         // Actions
         setFilter,
+        handleCategorySelect,
         handleHabitPress,
         handleEdit,
         handleDelete,

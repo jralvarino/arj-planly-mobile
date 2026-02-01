@@ -1,17 +1,40 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Calendar } from "react-native-calendars";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CategoryFilter } from "../../components/CategoryFilter";
+import { HabitFilter } from "../../components/HabitFilter";
 import { colors } from "../../theme/colors";
 import { headerTitleComponent } from "../../utils/dateUtils";
 import { useStatisticsViewModel } from "../../viewmodels/statistics/useStatisticsViewModel";
 
+const MEDAL_SOURCES = [
+    require("../../../assets/images/medal_3.png"),
+    require("../../../assets/images/medal_4.png"),
+    require("../../../assets/images/medal_5.png"),
+    require("../../../assets/images/medal_6.png"),
+    require("../../../assets/images/medal_7.png"),
+    require("../../../assets/images/medal_8.png"),
+    require("../../../assets/images/medal_9.png"),
+];
+
 export default function StatisticsScreen() {
-    const insets = useSafeAreaInsets();
-    const { selectedDate, loading, markedDates, dashboardData, handleDayPress, handleMonthChange, refetchDashboard } =
-        useStatisticsViewModel();
+    const {
+        selectedDate,
+        selectedCategoryId,
+        selectedHabitId,
+        categories,
+        habits,
+        loading,
+        markedDates,
+        dashboardData,
+        handleDayPress,
+        handleMonthChange,
+        handleCategorySelect,
+        handleHabitSelect,
+        refetchDashboard,
+    } = useStatisticsViewModel();
 
     useFocusEffect(
         useCallback(() => {
@@ -20,12 +43,28 @@ export default function StatisticsScreen() {
     );
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.container}>
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                <View style={styles.filtersRow}>
+                    <View style={styles.filterItemHabit}>
+                        <HabitFilter
+                            habits={habits}
+                            selectedHabitId={selectedHabitId}
+                            onHabitSelect={handleHabitSelect}
+                        />
+                    </View>
+                    <View style={styles.filterItemCategory}>
+                        <CategoryFilter
+                            categories={categories}
+                            selectedCategoryId={selectedCategoryId}
+                            onCategorySelect={handleCategorySelect}
+                        />
+                    </View>
+                </View>
                 <View style={styles.calendarWrapper}>
                     {loading && (
                         <View style={styles.loadingOverlay}>
@@ -58,6 +97,26 @@ export default function StatisticsScreen() {
                         style={styles.calendar}
                     />
                 </View>
+                {selectedHabitId != null && (
+                    <View style={styles.statsCard}>
+                        <Text style={styles.statsTitle}>Medalhas</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.medalsRow}
+                        >
+                            {MEDAL_SOURCES.map((source, index) => (
+                                <View key={index} style={styles.medalItem}>
+                                    <Image
+                                        source={source}
+                                        style={styles.medalImage}
+                                        resizeMode="contain"
+                                    />
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
                 {dashboardData && (
                     <>
                         <View style={styles.statsCard}>
@@ -194,6 +253,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingBottom: 24,
     },
+    filtersRow: {
+        flexDirection: "row",
+        gap: 0,
+        marginBottom: 0,
+    },
+    filterItemHabit: {
+        flex: 3,
+    },
+    filterItemCategory: {
+        flex: 2,
+    },
     title: {
         fontSize: 22,
         fontWeight: "700",
@@ -296,5 +366,28 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: colors.text.body,
         textTransform: "capitalize",
+    },
+    medalsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 7,
+        paddingRight: 4,
+    },
+    medalItem: {
+        width: 44,
+        height: 44,
+        borderRadius: 8,
+        backgroundColor: colors.gray[50],
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: colors.gray[200],
+    },
+    medalEmoji: {
+        fontSize: 28,
+    },
+    medalImage: {
+        width: 32,
+        height: 32,
     },
 });

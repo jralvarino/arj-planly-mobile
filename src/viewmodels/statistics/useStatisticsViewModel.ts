@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DateData } from "react-native-calendars";
 import Toast from "react-native-toast-message";
+import { Category } from "../../models/Category";
+import { Habit } from "../../models/Habit";
+import { getAllCategories } from "../../service/category.service";
+import { getAllHabits } from "../../service/habit.service";
 import { DashboardResponse, getDashboard } from "../../service/stats.service";
 import { colors } from "../../theme/colors";
 import { formatDate } from "../../utils/dateUtils";
@@ -55,21 +59,52 @@ export function useStatisticsViewModel() {
     const today = formatDate(new Date());
     const [selectedDate, setSelectedDate] = useState<string>(today);
     const [currentMonth, setCurrentMonth] = useState<string>(getMonthFromDate(today));
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [habits, setHabits] = useState<Habit[]>([]);
     const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const fetchDashboard = useCallback(async (month: string, selected: string) => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
-
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
-
+    const fetchCategories = useCallback(async () => {
         try {
-            setLoading(true);
-            const data = await getDashboard({ month, selectedDate: selected }, abortController.signal);
+            const data = await getAllCategories();
+            setCategories(data);
+        } catch (err) {
+            console.error("Error fetching categories:", err);
+        }
+    }, []);
+
+    const fetchHabits = useCallback(async () => {
+        try {
+            const data = await getAllHabits();
+            setHabits(data);
+        } catch (err) {
+            console.error("Error fetching habits:", err);
+        }
+    }, []);
+
+    const fetchDashboard = useCallback(
+        async (month: string, selected: string, categoryId: string | null, habitId: string | null) => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+
+            const abortController = new AbortController();
+            abortControllerRef.current = abortController;
+
+            try {
+                setLoading(true);
+                const data = await getDashboard(
+                    {
+                        month,
+                        selectedDate: selected,
+                        ...(categoryId ? { categoryId } : {}),
+                        ...(habitId ? { habitId } : {}),
+                    },
+                    abortController.signal
+                );
 
             if (!abortController.signal.aborted) {
                 setDashboardData(data);
@@ -146,21 +181,43 @@ export function useStatisticsViewModel() {
         return result;
     }, [dashboardData?.completedDates, selectedDate]);
 
+    const handleCategorySelect = useCallback((categoryId: string | null) => {
+        setSelectedCategoryId(categoryId);
+    }, []);
+
+    const handleHabitSelect = useCallback((habitId: string | null) => {
+        setSelectedHabitId(habitId);
+    }, []);
+
     const refetchDashboard = useCallback(() => {
-        fetchDashboard(currentMonth, selectedDate);
-    }, [currentMonth, selectedDate, fetchDashboard]);
+        fetchDashboard(currentMonth, selectedDate, selectedCategoryId, selectedHabitId);
+    }, [currentMonth, selectedDate, selectedCategoryId, selectedHabitId, fetchDashboard]);
 
     useEffect(() => {
-        fetchDashboard(currentMonth, selectedDate);
-    }, [currentMonth, selectedDate, fetchDashboard]);
+        fetchCategories();
+    }, [fetchCategories]);
+
+    useEffect(() => {
+        fetchHabits();
+    }, [fetchHabits]);
+
+    useEffect(() => {
+        fetchDashboard(currentMonth, selectedDate, selectedCategoryId, selectedHabitId);
+    }, [currentMonth, selectedDate, selectedCategoryId, selectedHabitId, fetchDashboard]);
 
     return {
         selectedDate,
+        selectedCategoryId,
+        selectedHabitId,
+        categories,
+        habits,
         loading,
         markedDates: markedDates(),
         dashboardData,
         handleDayPress,
         handleMonthChange,
+        handleCategorySelect,
+        handleHabitSelect,
         refetchDashboard,
     };
 }

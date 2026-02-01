@@ -204,9 +204,9 @@ export function WeekCarousel({
 const styles = StyleSheet.create({
     picker: {
         height: 100,
-        paddingTop: 5,
-        paddingBottom: 2,
-        marginBottom: 0,
+        paddingTop: 2,
+        paddingBottom: 0,
+        marginBottom: -15,
         backgroundColor: colors.background,
     },
     itemContainer: {
