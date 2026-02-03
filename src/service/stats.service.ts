@@ -19,6 +19,7 @@ export interface HabitForSelectedDate {
     progressValue?: string;
     notes?: string;
     updatedAt?: string;
+    completedAt?: string;
 }
 
 export interface DashboardResponse {

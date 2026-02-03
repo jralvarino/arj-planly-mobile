@@ -9,7 +9,8 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit }: HabitCardProps) {
-    const { formattedPeriodType, formattedStartDate, goalText, isInactive } = useHabitCardViewModel({ habit });
+    const { formattedPeriodType, formattedSelectedDates, formattedStartDate, formattedEndDate, goalText, isInactive } =
+        useHabitCardViewModel({ habit });
 
     return (
         <View style={[styles.card, { borderLeftColor: habit.color }]}>
@@ -34,18 +35,21 @@ export function HabitCard({ habit }: HabitCardProps) {
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Repeat:</Text>
-                    <Text style={styles.detailValue}>{formattedPeriodType}</Text>
+                    <Text style={styles.detailValue}>
+                        {formattedPeriodType}
+                        {formattedSelectedDates ? ` (${formattedSelectedDates})` : ""}
+                    </Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Time:</Text>
                     <Text style={styles.detailValue}>{habit.period}</Text>
                 </View>
-                {formattedStartDate && (
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Start:</Text>
-                        <Text style={styles.detailValue}>{formattedStartDate}</Text>
-                    </View>
-                )}
+                <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Start Date:</Text>
+                    <Text style={styles.detailValue}>{formattedStartDate ?? "undefined"}</Text>
+                    <Text style={styles.detailSeparator}> → </Text>
+                    <Text style={styles.detailValue}>{formattedEndDate ?? "undefined"}</Text>
+                </View>
             </View>
         </View>
     );
@@ -129,5 +133,10 @@ const styles = StyleSheet.create({
     detailValue: {
         fontSize: 12,
         color: colors.text.title,
+    },
+    detailSeparator: {
+        fontSize: 12,
+        color: colors.text.body,
+        marginHorizontal: 4,
     },
 });

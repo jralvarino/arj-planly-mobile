@@ -559,7 +559,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         paddingVertical: 3,
         borderRadius: 7,
-
     },
     streakTagText: {
         fontSize: 10,

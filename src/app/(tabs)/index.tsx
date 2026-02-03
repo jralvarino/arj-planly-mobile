@@ -1,9 +1,10 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "expo-router";
 import { useCallback, useEffect } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryFilter } from "../../components/CategoryFilter";
+import { StreakBadge } from "../../components/StreakBadge";
 import { TodoCard } from "../../components/TodoCard";
 import { WeekCarousel } from "../../components/WeekCarousel";
 import { useStreakStore } from "../../stores/streakStore";
@@ -69,12 +70,7 @@ export default function HomeScreen() {
                     <Text style={styles.headerTitleText}>{title}</Text>
                 </View>
             ),
-            headerRight: () => (
-                <View style={styles.streakTag}>
-                    <Ionicons name="flame" size={16} color={colors.orange.base} />
-                    <Text style={styles.streakText}>{globalStreak}</Text>
-                </View>
-            ),
+            headerRight: () => <StreakBadge globalStreak={globalStreak} />,
         });
     }, [selectedDate, navigation, globalStreak]);
 
@@ -217,23 +213,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
-    },
-    streakTag: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: colors.orange.light,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginRight: 16,
-        gap: 4,
-        borderWidth: 1,
-        borderColor: colors.orange.base,
-    },
-    streakText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: colors.orange.base,
     },
     header: {
         flexDirection: "row",

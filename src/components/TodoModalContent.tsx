@@ -1,8 +1,8 @@
 import { colors } from "@/theme/colors";
 import React from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
+import { Todo, TodoStatus } from "../models/Todo";
 
 interface TodoModalContentProps {
     todo: Todo;
@@ -63,14 +63,7 @@ export function TodoModalContent({
                         </Pressable>
                         <View style={styles.circularProgressWrapper}>
                             <Svg width={120} height={120} style={styles.circularProgressSvg}>
-                                <Circle
-                                    cx="60"
-                                    cy="60"
-                                    r="54"
-                                    stroke={colors.gray[200]}
-                                    strokeWidth="12"
-                                    fill="none"
-                                />
+                                <Circle cx="60" cy="60" r="54" stroke={colors.gray[200]} strokeWidth="12" fill="none" />
                                 <Circle
                                     cx="60"
                                     cy="60"
@@ -88,9 +81,7 @@ export function TodoModalContent({
                                 <Text style={styles.circularProgressText}>
                                     {modalProgressValue} / {todo.targetValue}
                                 </Text>
-                                {todo.unit !== "count" && (
-                                    <Text style={styles.circularProgressUnit}>{todo.unit}</Text>
-                                )}
+                                {todo.unit !== "count" && <Text style={styles.circularProgressUnit}>{todo.unit}</Text>}
                             </View>
                         </View>
                         <Pressable

@@ -1,13 +1,44 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import moment from "moment";
+import { useCallback, useMemo } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { HabitFilter } from "../../components/HabitFilter";
+import { HabitForSelectedDate } from "../../service/stats.service";
 import { colors } from "../../theme/colors";
 import { headerTitleComponent } from "../../utils/dateUtils";
 import { useStatisticsViewModel } from "../../viewmodels/statistics/useStatisticsViewModel";
+
+function formatCompletedAtForHistory(completedAt: string | undefined, selectedDate: string): string {
+    if (!completedAt) return "—";
+    const m = moment(completedAt);
+    if (!m.isValid()) return "—";
+    const completedDateStr = m.format("YYYY-MM-DD");
+    if (completedDateStr === selectedDate) {
+        return m.format("HH:mm");
+    }
+    return m.format("DD/MM/YY HH:mm");
+}
+
+function isCompletedAtDifferentDate(completedAt: string | undefined, selectedDate: string): boolean {
+    if (!completedAt) return false;
+    const m = moment(completedAt);
+    if (!m.isValid()) return false;
+    return m.format("YYYY-MM-DD") !== selectedDate;
+}
+
+function sortHabitsByCompletedAt(habits: HabitForSelectedDate[]): HabitForSelectedDate[] {
+    return [...habits].sort((a, b) => {
+        const aTime = a.completedAt ?? "";
+        const bTime = b.completedAt ?? "";
+        if (!aTime && !bTime) return 0;
+        if (!aTime) return 1;
+        if (!bTime) return -1;
+        return aTime.localeCompare(bTime);
+    });
+}
 
 const MEDAL_SOURCES = [
     require("../../../assets/images/medal_3.png"),
@@ -35,6 +66,17 @@ export default function StatisticsScreen() {
         handleHabitSelect,
         refetchDashboard,
     } = useStatisticsViewModel();
+
+    const sortedHabitsForTimeline = useMemo(
+        () =>
+            dashboardData?.habitsForSelectedDate ? sortHabitsByCompletedAt(dashboardData.habitsForSelectedDate) : [],
+        [dashboardData?.habitsForSelectedDate]
+    );
+
+    const categoryNameById = useMemo(
+        () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
+        [categories]
+    );
 
     useFocusEffect(
         useCallback(() => {
@@ -107,11 +149,7 @@ export default function StatisticsScreen() {
                         >
                             {MEDAL_SOURCES.map((source, index) => (
                                 <View key={index} style={styles.medalItem}>
-                                    <Image
-                                        source={source}
-                                        style={styles.medalImage}
-                                        resizeMode="contain"
-                                    />
+                                    <Image source={source} style={styles.medalImage} resizeMode="contain" />
                                 </View>
                             ))}
                         </ScrollView>
@@ -204,34 +242,53 @@ export default function StatisticsScreen() {
                                 </View>
                             </View>
                         )}
-                        {dashboardData.habitsForSelectedDate && dashboardData.habitsForSelectedDate.length > 0 && (
-                            <View style={styles.statsCard}>
-                                <Text style={styles.statsTitle}>{headerTitleComponent(selectedDate)}</Text>
-                                {dashboardData.habitsForSelectedDate.map((habit) => (
-                                    <View key={habit.id} style={styles.habitRow}>
-                                        <Text style={styles.habitEmoji}>{habit.emoji}</Text>
-                                        <View style={styles.habitInfo}>
-                                            <Text style={styles.habitTitle}>{habit.title}</Text>
-                                            {habit.progressValue != null && habit.targetValue != null && (
-                                                <Text style={styles.habitProgress}>
-                                                    {habit.progressValue} / {habit.targetValue}
+                        {sortedHabitsForTimeline.length > 0 && (
+                            <View style={[styles.statsCard, styles.historyCard]}>
+                                <Text style={styles.historyTitle}>Historic</Text>
+                                <View style={styles.timeline}>
+                                    {sortedHabitsForTimeline.map((habit, index) => (
+                                        <View key={habit.id} style={styles.timelineRow}>
+                                            <View style={styles.timelineLeft}>
+                                                <Text
+                                                    style={[
+                                                        styles.timelineTime,
+                                                        isCompletedAtDifferentDate(habit.completedAt, selectedDate) &&
+                                                            styles.timelineTimeFullDate,
+                                                    ]}
+                                                >
+                                                    {formatCompletedAtForHistory(habit.completedAt, selectedDate)}
                                                 </Text>
-                                            )}
-                                        </View>
-                                        {habit.status && (
-                                            <View
-                                                style={[
-                                                    styles.statusBadge,
-                                                    habit.status === "done" && styles.statusDone,
-                                                    habit.status === "skipped" && styles.statusSkipped,
-                                                    habit.status === "pending" && styles.statusPending,
-                                                ]}
-                                            >
-                                                <Text style={styles.statusText}>{habit.status}</Text>
+                                                <View style={styles.timelineDot} />
+                                                {index < sortedHabitsForTimeline.length - 1 && (
+                                                    <View style={styles.timelineLine} />
+                                                )}
                                             </View>
-                                        )}
-                                    </View>
-                                ))}
+                                            <View style={styles.habitRow}>
+                                                <Text style={styles.habitEmoji}>{habit.emoji}</Text>
+                                                <View style={styles.habitInfo}>
+                                                    <Text style={styles.habitTitle}>{habit.title}</Text>
+                                                    {categoryNameById[habit.categoryId] != null && (
+                                                        <Text style={styles.habitCategory}>
+                                                            #{categoryNameById[habit.categoryId]}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                                {habit.status && (
+                                                    <View
+                                                        style={[
+                                                            styles.statusBadge,
+                                                            habit.status === "done" && styles.statusDone,
+                                                            habit.status === "skipped" && styles.statusSkipped,
+                                                            habit.status === "pending" && styles.statusPending,
+                                                        ]}
+                                                    >
+                                                        <Text style={styles.statusText}>{habit.status}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
                             </View>
                         )}
                     </>
@@ -250,13 +307,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 24,
+        paddingBottom: 100,
     },
     filtersRow: {
         flexDirection: "row",
         gap: 0,
         marginBottom: 0,
+        paddingHorizontal: 10,
     },
     filterItemHabit: {
         flex: 3,
@@ -276,6 +333,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: "hidden",
         position: "relative",
+        paddingHorizontal: 10,
     },
     loadingOverlay: {
         position: "absolute",
@@ -299,12 +357,28 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         paddingHorizontal: 20,
         marginTop: 16,
+        marginHorizontal: -5,
+    },
+    historyCard: {
+        paddingHorizontal: 28,
     },
     statsTitle: {
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
         marginBottom: 16,
+    },
+    historyTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: colors.text.title,
+        marginBottom: 10,
+        textAlign: "center",
+    },
+    historySubtitle: {
+        fontSize: 12,
+        color: colors.text.body,
+        marginBottom: 12,
     },
     statsRow: {
         flexDirection: "row",
@@ -323,27 +397,70 @@ const styles = StyleSheet.create({
         color: colors.text.body,
         marginTop: 4,
     },
+    timeline: {
+        marginTop: 4,
+    },
+    timelineRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        minHeight: 40,
+    },
+    timelineLeft: {
+        width: 48,
+        alignItems: "center",
+        marginRight: 10,
+        paddingTop: 2,
+    },
+    timelineTime: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: colors.text.body,
+        marginBottom: 6,
+        textAlign: "center",
+    },
+    timelineTimeFullDate: {
+        fontSize: 10,
+    },
+    timelineDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: colors.primary,
+    },
+    timelineLine: {
+        width: 2,
+        height: 24,
+        marginTop: 4,
+        backgroundColor: colors.gray[200],
+    },
     habitRow: {
+        flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 8,
+        paddingVertical: 6,
+        paddingLeft: 0,
         borderBottomWidth: 1,
         borderBottomColor: colors.gray[200],
     },
     habitEmoji: {
-        fontSize: 24,
-        marginRight: 12,
+        fontSize: 18,
+        marginRight: 10,
     },
     habitInfo: {
         flex: 1,
     },
     habitTitle: {
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: "600",
         color: colors.text.title,
     },
+    habitCategory: {
+        fontSize: 10,
+        color: colors.text.body,
+        marginTop: 2,
+    },
     habitProgress: {
-        fontSize: 12,
+        fontSize: 11,
         color: colors.text.body,
         marginTop: 2,
     },
@@ -362,7 +479,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.gray[100],
     },
     statusText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: "600",
         color: colors.text.body,
         textTransform: "capitalize",

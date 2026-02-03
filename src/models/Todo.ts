@@ -21,4 +21,5 @@ export interface Todo {
     skiped: boolean;
     notes?: string;
     streak: string;
+    completedAt?: string;
 }

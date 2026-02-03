@@ -64,7 +64,7 @@ export function useTodoViewModel() {
     }, []);
 
     const sortTodos = useCallback((todos: Todo[]): Todo[] => {
-        // Ordena: 1) pending primeiro, done por último; 2) depois por period (Morning, Afternoon, Evening, Anytime)
+        // Ordena: 1) pending → skipped → done; 2) mesmo status: done por completedAt (asc), pending/skipped por period
         const periodOrder: Record<string, number> = {
             Morning: 1,
             Afternoon: 2,
@@ -85,10 +85,15 @@ export function useTodoViewModel() {
                 return statusDiff;
             }
 
-            // 2. Se status igual, ordena por period
-            const aPeriodOrder = periodOrder[a.period] || 5; // Valores não conhecidos ficam no final
-            const bPeriodOrder = periodOrder[b.period] || 5;
+            // 2. Mesmo status: done por completedAt (asc, mais antigo primeiro); pending/skipped por period
+            if (a.status === TODO_STATUS.DONE && b.status === TODO_STATUS.DONE) {
+                const aTime = a.completedAt ?? "";
+                const bTime = b.completedAt ?? "";
+                return aTime.localeCompare(bTime);
+            }
 
+            const aPeriodOrder = periodOrder[a.period] ?? 5;
+            const bPeriodOrder = periodOrder[b.period] ?? 5;
             return aPeriodOrder - bPeriodOrder;
         });
     }, []);
@@ -156,10 +161,18 @@ export function useTodoViewModel() {
                 isLastTodo = pendingTodos.length === 1 && pendingTodos[0].id === todoId;
             }
 
-            // Atualiza o estado local imediatamente (otimistic update)
+            // Atualiza o estado local imediatamente (otimistic update), com completedAt para ordenação correta
             setTodos((prevTodos) => {
                 const updatedTodos = prevTodos.map((todo) =>
-                    todo.id === todoId ? { ...todo, status: newStatus, progressValue } : todo
+                    todo.id === todoId
+                        ? {
+                              ...todo,
+                              status: newStatus,
+                              progressValue,
+                              completedAt:
+                                  newStatus === TODO_STATUS.DONE ? new Date().toISOString() : undefined,
+                          }
+                        : todo
                 );
                 const sortedData = sortTodos(updatedTodos);
                 todosRef.current = sortedData;
