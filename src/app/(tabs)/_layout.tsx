@@ -118,7 +118,7 @@ export default function TabsLayout() {
                         tabBarLabel: "Categories",
                         tabBarIcon: ({ focused, color }) => (
                             <View>
-                                <MaterialIcons name="label" size={30} color={focused ? colors.primary : "gray"} />
+                                <Ionicons name="pricetag" size={30} color={focused ? colors.primary : "gray"} />
                             </View>
                         ),
                     }}

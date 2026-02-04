@@ -8,18 +8,18 @@ export interface GlobalStreakResponse {
 export interface HabitForSelectedDate {
     id: string;
     title: string;
-    color: string;
     emoji: string;
-    unit: string;
-    targetValue: string;
     categoryId: string;
-    period: string;
-    active: boolean;
     status?: string;
+    completedAt?: string;
+    color?: string;
+    unit?: string;
+    targetValue?: string;
+    period?: string;
+    active?: boolean;
     progressValue?: string;
     notes?: string;
     updatedAt?: string;
-    completedAt?: string;
 }
 
 export interface DashboardResponse {
@@ -30,11 +30,21 @@ export interface DashboardResponse {
     lastCompletedDate?: string;
     monthCompletionCount: number;
     monthCompletionRate: number;
+    monthTotalCompletions?: number;
+    monthDailyAverage?: number;
+    monthBestStreak?: number;
     daysInMonth: number;
     habitsForSelectedDate?: HabitForSelectedDate[];
     categoryStreak?: number;
     categoryLongestStreak?: number;
     categoryTotalCompletions?: number;
+    categoryMonthTotalCompletions?: number;
+    categoryMonthDailyAverage?: number;
+    categoryMonthBestStreak?: number;
+    habitStreak?: number;
+    habitMonthTotalCompletions?: number;
+    habitMonthDailyAverage?: number;
+    habitMonthBestStreak?: number;
 }
 
 export const getGlobalStreak = async (): Promise<string> => {
@@ -51,20 +61,16 @@ export interface GetDashboardParams {
     selectedDate?: string;
 }
 
-export const getDashboard = async (
-    params: GetDashboardParams,
-    signal?: AbortSignal
-): Promise<DashboardResponse> => {
+export const getDashboard = async (params: GetDashboardParams, signal?: AbortSignal): Promise<DashboardResponse> => {
     const { month, categoryId, habitId, selectedDate } = params;
     const searchParams = new URLSearchParams({ month });
     if (categoryId) searchParams.set("categoryId", categoryId);
     if (habitId) searchParams.set("habitId", habitId);
     if (selectedDate) searchParams.set("selectedDate", selectedDate);
 
-    const { data } = await planlyApiClient.get<DashboardResponse>(
-        `/stats/dashboard?${searchParams.toString()}`,
-        { signal }
-    );
+    const { data } = await planlyApiClient.get<DashboardResponse>(`/stats/dashboard?${searchParams.toString()}`, {
+        signal,
+    });
 
     if (!data) {
         return {
@@ -86,6 +92,16 @@ export const getDashboard = async (
         globalTotalCompletions: data.globalTotalCompletions ?? 0,
         monthCompletionCount: data.monthCompletionCount ?? 0,
         monthCompletionRate: data.monthCompletionRate ?? 0,
+        monthTotalCompletions: data.monthTotalCompletions,
+        monthDailyAverage: data.monthDailyAverage,
+        monthBestStreak: data.monthBestStreak,
+        categoryMonthTotalCompletions: data.categoryMonthTotalCompletions,
+        categoryMonthDailyAverage: data.categoryMonthDailyAverage,
+        categoryMonthBestStreak: data.categoryMonthBestStreak,
+        habitStreak: data.habitStreak,
+        habitMonthTotalCompletions: data.habitMonthTotalCompletions,
+        habitMonthDailyAverage: data.habitMonthDailyAverage,
+        habitMonthBestStreak: data.habitMonthBestStreak,
         daysInMonth: data.daysInMonth ?? 0,
     };
 };

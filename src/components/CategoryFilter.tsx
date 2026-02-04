@@ -10,11 +10,7 @@ interface CategoryFilterProps {
     onCategorySelect: (categoryId: string | null) => void;
 }
 
-export function CategoryFilter({
-    categories,
-    selectedCategoryId,
-    onCategorySelect,
-}: CategoryFilterProps) {
+export function CategoryFilter({ categories, selectedCategoryId, onCategorySelect }: CategoryFilterProps) {
     const [expanded, setExpanded] = useState(false);
 
     const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
@@ -39,57 +35,38 @@ export function CategoryFilter({
 
     return (
         <View style={styles.container}>
-            <Pressable
-                style={styles.trigger}
-                onPress={handleToggleExpand}
-                android_ripple={{ color: colors.gray[200] }}
-            >
-                <Text style={styles.triggerValue} numberOfLines={1}>
-                    {displayLabel}
-                </Text>
-                <Ionicons
-                    name={expanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color={colors.text.body}
-                />
+            <Pressable style={styles.trigger} onPress={handleToggleExpand} android_ripple={{ color: colors.gray[200] }}>
+                <View style={styles.triggerLeft}>
+                    <View style={styles.iconWrapper}>
+                        <Ionicons name="pricetag" size={18} color={colors.primary} />
+                    </View>
+                    <Text style={styles.triggerValue} numberOfLines={1}>
+                        {displayLabel}
+                    </Text>
+                </View>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.text.body} />
             </Pressable>
             {expanded && (
                 <View style={styles.list}>
-                    <ScrollView
-                        nestedScrollEnabled
-                        showsVerticalScrollIndicator={false}
-                        style={styles.listScroll}
-                    >
+                    <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={styles.listScroll}>
                         <Pressable
-                            style={[
-                                styles.option,
-                                selectedCategoryId === null && styles.optionSelected,
-                            ]}
+                            style={[styles.option, selectedCategoryId === null && styles.optionSelected]}
                             onPress={handleSelectAll}
                         >
-                            <Text
-                                style={[
-                                    styles.optionText,
-                                    selectedCategoryId === null && styles.optionTextSelected,
-                                ]}
-                            >
+                            <Text style={[styles.optionText, selectedCategoryId === null && styles.optionTextSelected]}>
                                 All categories
                             </Text>
                         </Pressable>
                         {categories.map((category) => (
                             <Pressable
                                 key={category.id}
-                                style={[
-                                    styles.option,
-                                    selectedCategoryId === category.id && styles.optionSelected,
-                                ]}
+                                style={[styles.option, selectedCategoryId === category.id && styles.optionSelected]}
                                 onPress={() => handleSelectCategory(category.id)}
                             >
                                 <Text
                                     style={[
                                         styles.optionText,
-                                        selectedCategoryId === category.id &&
-                                            styles.optionTextSelected,
+                                        selectedCategoryId === category.id && styles.optionTextSelected,
                                     ]}
                                     numberOfLines={1}
                                 >
@@ -118,12 +95,23 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
     },
+    triggerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        minWidth: 0,
+        marginRight: 8,
+    },
+    iconWrapper: {
+        marginRight: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     triggerValue: {
         fontSize: 12,
         fontWeight: "600",
         color: colors.text.title,
         flex: 1,
-        marginRight: 8,
     },
     list: {
         borderTopWidth: 1,

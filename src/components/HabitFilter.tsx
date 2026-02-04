@@ -35,47 +35,32 @@ export function HabitFilter({ habits, selectedHabitId, onHabitSelect }: HabitFil
 
     return (
         <View style={styles.container}>
-            <Pressable
-                style={styles.trigger}
-                onPress={handleToggleExpand}
-                android_ripple={{ color: colors.gray[200] }}
-            >
-                <Text style={styles.triggerValue} numberOfLines={1}>
-                    {displayLabel}
-                </Text>
-                <Ionicons
-                    name={expanded ? "chevron-up" : "chevron-down"}
-                    size={20}
-                    color={colors.text.body}
-                />
+            <Pressable style={styles.trigger} onPress={handleToggleExpand} android_ripple={{ color: colors.gray[200] }}>
+                <View style={styles.triggerLeft}>
+                    <View style={styles.iconWrapper}>
+                        <Ionicons name="bag-check-sharp" size={18} color={colors.primary} />
+                    </View>
+                    <Text style={styles.triggerValue} numberOfLines={1}>
+                        {displayLabel}
+                    </Text>
+                </View>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.text.body} />
             </Pressable>
             {expanded && (
                 <View style={styles.list}>
-                    <ScrollView
-                        nestedScrollEnabled
-                        showsVerticalScrollIndicator={false}
-                        style={styles.listScroll}
-                    >
+                    <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={styles.listScroll}>
                         <Pressable
                             style={[styles.option, selectedHabitId === null && styles.optionSelected]}
                             onPress={handleSelectAll}
                         >
-                            <Text
-                                style={[
-                                    styles.optionText,
-                                    selectedHabitId === null && styles.optionTextSelected,
-                                ]}
-                            >
+                            <Text style={[styles.optionText, selectedHabitId === null && styles.optionTextSelected]}>
                                 All habits
                             </Text>
                         </Pressable>
                         {habits.map((habit) => (
                             <Pressable
                                 key={habit.id}
-                                style={[
-                                    styles.option,
-                                    selectedHabitId === habit.id && styles.optionSelected,
-                                ]}
+                                style={[styles.option, selectedHabitId === habit.id && styles.optionSelected]}
                                 onPress={() => handleSelectHabit(habit.id)}
                             >
                                 <Text style={styles.optionEmoji}>{habit.emoji}</Text>
@@ -111,12 +96,23 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
     },
+    triggerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        minWidth: 0,
+        marginRight: 8,
+    },
+    iconWrapper: {
+        marginRight: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     triggerValue: {
         fontSize: 12,
         fontWeight: "600",
         color: colors.text.title,
         flex: 1,
-        marginRight: 8,
     },
     list: {
         borderTopWidth: 1,

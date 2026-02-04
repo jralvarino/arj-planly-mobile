@@ -1,14 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import moment from "moment";
 import { useCallback, useMemo } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { HabitFilter } from "../../components/HabitFilter";
+import { StatisticsOverview, StatisticsOverviewData } from "../../components/StatisticsOverview";
+import { StreakRecordCard } from "../../components/StreakRecordCard";
 import { HabitForSelectedDate } from "../../service/stats.service";
 import { colors } from "../../theme/colors";
-import { headerTitleComponent } from "../../utils/dateUtils";
 import { useStatisticsViewModel } from "../../viewmodels/statistics/useStatisticsViewModel";
 
 function formatCompletedAtForHistory(completedAt: string | undefined, selectedDate: string): string {
@@ -40,16 +40,6 @@ function sortHabitsByCompletedAt(habits: HabitForSelectedDate[]): HabitForSelect
     });
 }
 
-const MEDAL_SOURCES = [
-    require("../../../assets/images/medal_1.png"),
-    require("../../../assets/images/medal_4.png"),
-    require("../../../assets/images/medal_5.png"),
-    require("../../../assets/images/medal_6.png"),
-    require("../../../assets/images/medal_7.png"),
-    require("../../../assets/images/medal_8.png"),
-    require("../../../assets/images/medal_9.png"),
-];
-
 export default function StatisticsScreen() {
     const {
         selectedDate,
@@ -73,10 +63,68 @@ export default function StatisticsScreen() {
         [dashboardData?.habitsForSelectedDate]
     );
 
-    const categoryNameById = useMemo(
-        () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
-        [categories]
-    );
+    const categoryNameById = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c.name])), [categories]);
+
+    const overviewData: StatisticsOverviewData = useMemo(() => {
+        if (!dashboardData) {
+            return {
+                monthlyRatePercent: 0,
+                monthBestStreak: 0,
+                monthCompletionCount: 0,
+                monthTotalCompletions: 0,
+                monthDailyAverage: 0,
+            };
+        }
+        const {
+            monthCompletionRate,
+            monthCompletionCount,
+            monthTotalCompletions,
+            monthDailyAverage,
+            monthBestStreak,
+            globalTotalCompletions,
+            daysInMonth,
+            categoryMonthTotalCompletions,
+            categoryMonthDailyAverage,
+            categoryMonthBestStreak,
+            habitMonthTotalCompletions,
+            habitMonthDailyAverage,
+            habitMonthBestStreak,
+        } = dashboardData;
+        // When both category and habit are selected, use habit data (habit takes precedence)
+        const useHabitStats = selectedHabitId != null;
+        const useCategoryStats = selectedCategoryId != null && !useHabitStats;
+        const bestStreak =
+            useHabitStats && habitMonthBestStreak != null
+                ? habitMonthBestStreak
+                : useCategoryStats && categoryMonthBestStreak != null
+                  ? categoryMonthBestStreak
+                  : (monthBestStreak ?? 0);
+        const totalCompletions =
+            useHabitStats && habitMonthTotalCompletions != null
+                ? habitMonthTotalCompletions
+                : useCategoryStats && categoryMonthTotalCompletions != null
+                  ? categoryMonthTotalCompletions
+                  : (monthTotalCompletions ?? globalTotalCompletions ?? 0);
+        const rawDailyAverage =
+            useHabitStats && habitMonthDailyAverage != null
+                ? habitMonthDailyAverage
+                : useCategoryStats && categoryMonthDailyAverage != null
+                  ? categoryMonthDailyAverage
+                  : monthDailyAverage;
+        const monthDailyAverageFormatted =
+            rawDailyAverage != null
+                ? Number(rawDailyAverage.toFixed(1))
+                : daysInMonth > 0 && globalTotalCompletions != null
+                  ? Number((globalTotalCompletions / daysInMonth).toFixed(1))
+                  : 0;
+        return {
+            monthlyRatePercent: Math.round(monthCompletionRate * 100),
+            monthBestStreak: bestStreak,
+            monthCompletionCount,
+            monthTotalCompletions: totalCompletions,
+            monthDailyAverage: monthDailyAverageFormatted,
+        };
+    }, [dashboardData, selectedCategoryId, selectedHabitId]);
 
     useFocusEffect(
         useCallback(() => {
@@ -139,112 +187,47 @@ export default function StatisticsScreen() {
                         style={styles.calendar}
                     />
                 </View>
-                {selectedHabitId != null && (
-                    <View style={styles.statsCard}>
-                        <Text style={styles.statsTitle}>Medalhas</Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.medalsRow}
-                        >
-                            {MEDAL_SOURCES.map((source, index) => (
-                                <View key={index} style={styles.medalItem}>
-                                    <Image source={source} style={styles.medalImage} resizeMode="contain" />
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                )}
+                <StatisticsOverview data={overviewData} />
                 {dashboardData && (
                     <>
-                        <View style={styles.statsCard}>
-                            <Text style={styles.statsTitle}>Month Summary</Text>
-                            <View style={styles.statsRow}>
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: colors.success }]}>
-                                        {dashboardData.monthCompletionCount}
-                                    </Text>
-                                    <Text style={styles.statLabel}>Completed Days</Text>
+                        <View style={[styles.statsCard, styles.statsCardRecords]}>
+                            <View style={styles.historyTitleBanner}>
+                                <Text style={styles.historyTitleText}>YOUR RECORDS</Text>
+                            </View>
+                            <View style={styles.streakCardsRow}>
+                                <View style={[styles.streakCardItem, styles.streakCardItemFirst]}>
+                                    <StreakRecordCard
+                                        value={
+                                            selectedHabitId != null && dashboardData.habitMonthBestStreak != null
+                                                ? dashboardData.habitMonthBestStreak
+                                                : (dashboardData.globalLongestStreak ?? 0)
+                                        }
+                                        label="Your longest streak"
+                                        ringColor={colors.gold}
+                                        iconName="trophy"
+                                        iconColor={colors.gold}
+                                    />
                                 </View>
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: colors.primary }]}>
-                                        {Math.round(dashboardData.monthCompletionRate * 100)}%
-                                    </Text>
-                                    <Text style={styles.statLabel}>Completion Rate</Text>
-                                </View>
-                                <View style={styles.statItem}>
-                                    <Text style={[styles.statValue, { color: colors.text.title }]}>
-                                        {dashboardData.daysInMonth}
-                                    </Text>
-                                    <Text style={styles.statLabel}>Days in Month</Text>
+                                <View style={styles.streakCardItem}>
+                                    <StreakRecordCard
+                                        value={
+                                            selectedHabitId != null && dashboardData.habitStreak != null
+                                                ? dashboardData.habitStreak
+                                                : (dashboardData.globalStreak ?? 0)
+                                        }
+                                        label="Your current streak"
+                                        ringColor={colors.orange.base}
+                                        iconName="flame"
+                                        iconColor={colors.orange.base}
+                                    />
                                 </View>
                             </View>
                         </View>
-                        {(dashboardData.globalStreak > 0 ||
-                            dashboardData.globalLongestStreak > 0 ||
-                            dashboardData.globalTotalCompletions > 0) && (
-                            <View style={styles.statsCard}>
-                                <Text style={styles.statsTitle}>Global Streaks</Text>
-                                <View style={styles.statsRow}>
-                                    <View style={styles.statItem}>
-                                        <Ionicons name="flame" size={24} color={colors.orange.base} />
-                                        <Text style={[styles.statValue, { color: colors.orange.base }]}>
-                                            {dashboardData.globalStreak}
-                                        </Text>
-                                        <Text style={styles.statLabel}>Current</Text>
-                                    </View>
-                                    <View style={styles.statItem}>
-                                        <Ionicons name="trophy" size={24} color={colors.gold} />
-                                        <Text style={[styles.statValue, { color: colors.gold }]}>
-                                            {dashboardData.globalLongestStreak}
-                                        </Text>
-                                        <Text style={styles.statLabel}>Longest</Text>
-                                    </View>
-                                    <View style={styles.statItem}>
-                                        <Text style={[styles.statValue, { color: colors.primary }]}>
-                                            {dashboardData.globalTotalCompletions}
-                                        </Text>
-                                        <Text style={styles.statLabel}>Total</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        )}
-                        {(dashboardData.categoryStreak !== undefined ||
-                            dashboardData.categoryLongestStreak !== undefined ||
-                            dashboardData.categoryTotalCompletions !== undefined) && (
-                            <View style={styles.statsCard}>
-                                <Text style={styles.statsTitle}>Category Streaks</Text>
-                                <View style={styles.statsRow}>
-                                    {dashboardData.categoryStreak !== undefined && (
-                                        <View style={styles.statItem}>
-                                            <Text style={[styles.statValue, { color: colors.orange.base }]}>
-                                                {dashboardData.categoryStreak}
-                                            </Text>
-                                            <Text style={styles.statLabel}>Current</Text>
-                                        </View>
-                                    )}
-                                    {dashboardData.categoryLongestStreak !== undefined && (
-                                        <View style={styles.statItem}>
-                                            <Text style={[styles.statValue, { color: colors.gold }]}>
-                                                {dashboardData.categoryLongestStreak}
-                                            </Text>
-                                            <Text style={styles.statLabel}>Longest</Text>
-                                        </View>
-                                    )}
-                                    {dashboardData.categoryTotalCompletions !== undefined && (
-                                        <View style={styles.statItem}>
-                                            <Text style={[styles.statValue, { color: colors.primary }]}>
-                                                {dashboardData.categoryTotalCompletions}
-                                            </Text>
-                                            <Text style={styles.statLabel}>Total</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                        )}
                         {sortedHabitsForTimeline.length > 0 && (
                             <View style={[styles.statsCard, styles.historyCard]}>
-                                <Text style={styles.historyTitle}>Historic</Text>
+                                <View style={styles.historyTitleBanner}>
+                                    <Text style={styles.historyTitleText}>HISTORIC</Text>
+                                </View>
                                 <View style={styles.timeline}>
                                     {sortedHabitsForTimeline.map((habit, index) => (
                                         <View key={habit.id} style={styles.timelineRow}>
@@ -319,7 +302,7 @@ const styles = StyleSheet.create({
         flex: 3,
     },
     filterItemCategory: {
-        flex: 2,
+        flex: 3,
     },
     title: {
         fontSize: 22,
@@ -359,21 +342,55 @@ const styles = StyleSheet.create({
         marginTop: 16,
         marginHorizontal: -5,
     },
+    statsCardRecords: {
+        marginHorizontal: 0,
+    },
     historyCard: {
         paddingHorizontal: 28,
+        marginTop: -20,
+    },
+    historyTitleBanner: {
+        backgroundColor: colors.gray[100],
+        borderRadius: 12,
+        paddingVertical: 5,
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.06,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 2,
+            },
+        }),
+    },
+    historyTitleText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: colors.text.title,
+        letterSpacing: 1.2,
+    },
+    streakCardsRow: {
+        flexDirection: "row",
+        width: "100%",
+    },
+    streakCardItem: {
+        flex: 1,
+        minWidth: 0,
+    },
+    streakCardItemFirst: {
+        marginRight: -20,
     },
     statsTitle: {
         fontSize: 18,
         fontWeight: "700",
         color: colors.text.title,
         marginBottom: 16,
-    },
-    historyTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: colors.text.title,
-        marginBottom: 10,
-        textAlign: "center",
     },
     historySubtitle: {
         fontSize: 12,
@@ -483,28 +500,5 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: colors.text.body,
         textTransform: "capitalize",
-    },
-    medalsRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 7,
-        paddingRight: 4,
-    },
-    medalItem: {
-        width: 44,
-        height: 44,
-        borderRadius: 8,
-        backgroundColor: colors.gray[50],
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: colors.gray[200],
-    },
-    medalEmoji: {
-        fontSize: 28,
-    },
-    medalImage: {
-        width: 32,
-        height: 32,
     },
 });

@@ -1,16 +1,16 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Dialog, Button, Portal } from "react-native-paper";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import { Button, Dialog, Portal } from "react-native-paper";
 import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { HabitCard } from "../../components/habit/HabitCard";
 import { Habit } from "../../models/Habit";
 import { colors } from "../../theme/colors";
-import { useHabitsViewModel } from "../../viewmodels/habit/useHabitsViewModel";
 import type { FilterType } from "../../viewmodels/habit/useHabitsViewModel";
+import { useHabitsViewModel } from "../../viewmodels/habit/useHabitsViewModel";
 
 const STATUS_LABELS: Record<FilterType, string> = {
     all: "All",
@@ -70,7 +70,11 @@ export default function HabitsListScreen() {
                         style={[styles.actionButton, styles.disableButton]}
                         onPress={() => handleDisable(habit)}
                     >
-                        <MaterialCommunityIcons name={habit.active ? "eye-off" : "eye"} size={24} color={colors.white} />
+                        <MaterialCommunityIcons
+                            name={habit.active ? "eye-off" : "eye"}
+                            size={24}
+                            color={colors.white}
+                        />
                         <Text style={styles.actionText}>{habit.active ? "Disable" : "Enable"}</Text>
                     </RectButton>
                     <RectButton style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(habit)}>
@@ -108,9 +112,14 @@ export default function HabitsListScreen() {
                             onPress={handleStatusToggle}
                             android_ripple={{ color: colors.gray[200] }}
                         >
-                            <Text style={styles.statusFilterTriggerValue} numberOfLines={1}>
-                                {statusDisplayLabel}
-                            </Text>
+                            <View style={styles.statusFilterTriggerLeft}>
+                                <View style={styles.statusFilterIconWrapper}>
+                                    <Ionicons name="filter" size={18} color={colors.primary} />
+                                </View>
+                                <Text style={styles.statusFilterTriggerValue} numberOfLines={1}>
+                                    {statusDisplayLabel}
+                                </Text>
+                            </View>
                             <Ionicons
                                 name={statusExpanded ? "chevron-up" : "chevron-down"}
                                 size={20}
@@ -162,10 +171,7 @@ export default function HabitsListScreen() {
                         </TouchableOpacity>
                     </Swipeable>
                 )}
-                contentContainerStyle={[
-                    styles.listContent,
-                    habits.length === 0 && styles.listContentEmpty,
-                ]}
+                contentContainerStyle={[styles.listContent, habits.length === 0 && styles.listContentEmpty]}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <MaterialCommunityIcons name="clipboard-list-outline" size={64} color={colors.gray[300]} />
@@ -179,7 +185,8 @@ export default function HabitsListScreen() {
                     <Dialog.Title>Delete Habit</Dialog.Title>
                     <Dialog.Content>
                         <Text>
-                            Are you sure you want to delete? All the historical data will be lost."{habitToDelete?.title}"?
+                            Are you sure you want to delete? All the historical data will be lost."
+                            {habitToDelete?.title}"?
                         </Text>
                     </Dialog.Content>
                     <Dialog.Actions>
@@ -223,12 +230,23 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 16,
     },
+    statusFilterTriggerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+        minWidth: 0,
+        marginRight: 8,
+    },
+    statusFilterIconWrapper: {
+        marginRight: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
     statusFilterTriggerValue: {
         fontSize: 12,
         fontWeight: "600",
         color: colors.text.title,
         flex: 1,
-        marginRight: 8,
     },
     statusFilterList: {
         borderTopWidth: 1,
