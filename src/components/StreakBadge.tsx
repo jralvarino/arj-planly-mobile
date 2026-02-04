@@ -49,8 +49,7 @@ export function StreakBadge({ globalStreak }: StreakBadgeProps) {
             <View style={styles.streakTextRow}>
                 <Animated.Text style={[styles.streakText, { transform: [{ scale: scaleAnim }] }]}>
                     {streakNumber}
-                </Animated.Text>
-                {streakSuffix ? <Text style={styles.streakText}>{streakSuffix}</Text> : null}
+                </Animated.Text>               
             </View>
         </View>
     );
@@ -61,11 +60,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: colors.orange.light,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
         borderRadius: 6,
         marginRight: 16,
-        gap: 4,
+        gap: 3,
         borderWidth: 1,
         borderColor: colors.orange.base,
     },

@@ -41,7 +41,7 @@ function sortHabitsByCompletedAt(habits: HabitForSelectedDate[]): HabitForSelect
 }
 
 const MEDAL_SOURCES = [
-    require("../../../assets/images/medal_3.png"),
+    require("../../../assets/images/medal_1.png"),
     require("../../../assets/images/medal_4.png"),
     require("../../../assets/images/medal_5.png"),
     require("../../../assets/images/medal_6.png"),

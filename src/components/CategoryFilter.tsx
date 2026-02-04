@@ -18,7 +18,7 @@ export function CategoryFilter({
     const [expanded, setExpanded] = useState(false);
 
     const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
-    const displayLabel = selectedCategory ? selectedCategory.name : "All categories";
+    const displayLabel = selectedCategory ? selectedCategory.name : "All Categories";
 
     const handleToggleExpand = useCallback(() => {
         setExpanded((prev) => !prev);

@@ -14,7 +14,7 @@ export function HabitFilter({ habits, selectedHabitId, onHabitSelect }: HabitFil
     const [expanded, setExpanded] = useState(false);
 
     const selectedHabit = habits.find((h) => h.id === selectedHabitId);
-    const displayLabel = selectedHabit ? `${selectedHabit.emoji} ${selectedHabit.title}` : "All habits";
+    const displayLabel = selectedHabit ? `${selectedHabit.emoji} ${selectedHabit.title}` : "All Habits";
 
     const handleToggleExpand = useCallback(() => {
         setExpanded((prev) => !prev);
