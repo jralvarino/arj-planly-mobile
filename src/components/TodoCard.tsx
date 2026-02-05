@@ -7,10 +7,12 @@ import {
     BottomSheetView,
     useBottomSheetModal,
 } from "@gorhom/bottom-sheet";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     Pressable,
     StyleSheet,
@@ -20,6 +22,12 @@ import {
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import * as Progress from "react-native-progress";
+import ReanimatedAnimated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+} from "react-native-reanimated";
 import Toast from "react-native-toast-message";
 import { Category } from "../models/Category";
 import { TODO_STATUS, Todo, TodoStatus } from "../models/Todo";
@@ -52,6 +60,7 @@ export function TodoCard({
     onSave,
     onSaveNotes,
 }: TodoCardProps) {
+    const router = useRouter();
     const swipeableRef = useRef<Swipeable>(null);
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
     const notesBottomSheetModalRef = useRef<BottomSheetModal>(null);
@@ -67,6 +76,16 @@ export function TodoCard({
     const prevStatusRef = useRef<TodoStatus>(todo.status);
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const opacityAnim = useRef(new Animated.Value(1)).current;
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const moreButtonRef = useRef<View>(null);
+    const buttonScale = useSharedValue(1);
+
+    const animatedButtonStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: buttonScale.value }],
+        };
+    });
 
     // Atualiza o estado local quando o todo prop muda
     useEffect(() => {
@@ -274,29 +293,97 @@ export function TodoCard({
         setLocalTodo({ ...localTodo, notes: modalNotes });
     };
 
+    const handleToggleMenu = () => {
+        if (isFutureDate) {
+            Toast.show({
+                type: "info",
+                text1: "Data Futura",
+                text2: "Itens futuros não podem ser alterados.",
+            });
+            swipeableRef.current?.close();
+            return;
+        }
+
+        // Animação de pulso
+        buttonScale.value = withSequence(
+            withSpring(0.9, { damping: 10, stiffness: 400 }),
+            withSpring(1, { damping: 10, stiffness: 400 })
+        );
+
+        if (!isMenuVisible && moreButtonRef.current) {
+            moreButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+                setMenuPosition({
+                    x: pageX,
+                    y: pageY + height,
+                });
+                setIsMenuVisible(true);
+            });
+        } else {
+            setIsMenuVisible(false);
+        }
+    };
+
+    const handleCloseMenu = () => {
+        setIsMenuVisible(false);
+        swipeableRef.current?.close();
+    };
+
+    const handleMenuOptionNotes = () => {
+        setIsMenuVisible(false);
+        swipeableRef.current?.close();
+        setTimeout(() => {
+            handleOpenNotesModal();
+        }, 300);
+    };
+
+    const handleMenuOptionSkip = () => {
+        setIsMenuVisible(false);
+        handleSkip();
+    };
+
+    const handleMenuOptionEditHabit = () => {
+        setIsMenuVisible(false);
+        swipeableRef.current?.close();
+        router.push(`/habits/${localTodo.id}`);
+    };
+
+    const handleMenuOptionStatistics = () => {
+        setIsMenuVisible(false);
+        swipeableRef.current?.close();
+        router.push({
+            pathname: "/(tabs)/statistics",
+            params: { habitId: localTodo.id },
+        });
+    };
+
     const renderRightActions = () => {
-        const isSkippedStatus = localTodo.status === TODO_STATUS.SKIPPED;
         return (
             <View style={styles.rightAction}>
-                <Pressable style={styles.notesButton} onPress={handleOpenNotesModal}>
-                    <Ionicons name="document-text-outline" size={24} color={colors.white} />
-                    <Text style={styles.notesButtonText}>Notes</Text>
-                </Pressable>
-                <Pressable style={styles.skipButton} onPress={handleSkip}>
-                    <Ionicons
-                        name={isSkippedStatus ? "play-back-outline" : "play-forward-outline"}
-                        size={24}
-                        color={colors.black}
-                    />
-                    <Text style={styles.skipButtonText}>{isSkippedStatus ? "Undo" : "Skip"}</Text>
-                </Pressable>
+                <ReanimatedAnimated.View
+                    ref={moreButtonRef}
+                    collapsable={false}
+                    style={[styles.moreButtonContainer, animatedButtonStyle]}
+                >
+                    <Pressable style={styles.moreButton} onPress={handleToggleMenu}>
+                        <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.body} />
+                        <Text style={styles.moreButtonText}>More</Text>
+                    </Pressable>
+                </ReanimatedAnimated.View>
             </View>
         );
     };
 
     return (
         <>
-            <Swipeable ref={swipeableRef} renderRightActions={renderRightActions} enabled={true}>
+            <Swipeable
+                ref={swipeableRef}
+                renderRightActions={renderRightActions}
+                enabled={!isFutureDate}
+                overshootRight={false}
+                overshootLeft={false}
+                rightThreshold={40}
+                friction={2}
+            >
                 <Pressable onPress={handleOpenModal}>
                     <Animated.View
                         style={[
@@ -484,6 +571,62 @@ export function TodoCard({
                     </KeyboardAvoidingView>
                 </BottomSheetView>
             </BottomSheetModal>
+
+            <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={handleCloseMenu}>
+                <Pressable style={styles.dropdownOverlay} onPress={handleCloseMenu}>
+                    <View
+                        style={[
+                            styles.dropdownMenu,
+                            {
+                                top: menuPosition.y,
+                                right: 10,
+                            },
+                        ]}
+                    >
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionNotes}
+                        >
+                            <Text style={styles.dropdownItemText}>Notes</Text>
+                            <Ionicons name="document-text-outline" size={18} color={colors.text.body} />
+                        </Pressable>
+
+                        <View style={styles.dropdownDivider} />
+
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionSkip}
+                        >
+                            <Text style={styles.dropdownItemText}>{isSkipped ? "Undo Skip" : "Skip"}</Text>
+                            <Ionicons
+                                name={isSkipped ? "play-back-outline" : "play-forward-outline"}
+                                size={18}
+                                color={colors.text.body}
+                            />
+                        </Pressable>
+
+                        <View style={styles.dropdownDivider} />
+
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionEditHabit}
+                        >
+                            <Text style={styles.dropdownItemText}>Edit Habit</Text>
+                            <Ionicons name="create-outline" size={18} color={colors.text.body} />
+                        </Pressable>
+
+                        <View style={styles.dropdownDivider} />
+
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionStatistics}
+                        >
+                            <Text style={styles.dropdownItemText}>Statistics</Text>
+                            <Ionicons name="stats-chart-outline" size={18} color={colors.text.body} />
+                        </Pressable>
+                    </View>
+                </Pressable>
+            </Modal>
         </>
     );
 }
@@ -595,39 +738,30 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
     },
-    notesButton: {
-        backgroundColor: colors.primary,
+    moreButtonContainer: {
+        alignSelf: "stretch",
+    },
+    moreButton: {
+        backgroundColor: colors.gray[200],
         justifyContent: "center",
         alignItems: "center",
-        width: 100,
-        paddingHorizontal: 16,
+        width: 80,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        height: "100%",
     },
-    notesButtonText: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: "600",
+    moreButtonText: {
+        color: colors.text.body,
+        fontSize: 12,
+        fontWeight: "500",
         marginTop: 4,
     },
     rightAction: {
+        width: 80,
         flexDirection: "row",
         justifyContent: "flex-end",
         alignItems: "stretch",
-        marginBottom: 12,
-        borderRadius: 12,
-        overflow: "hidden",
-    },
-    skipButton: {
-        backgroundColor: colors.warning.base,
-        justifyContent: "center",
-        alignItems: "center",
-        width: 100,
-        paddingHorizontal: 16,
-    },
-    skipButtonText: {
-        color: colors.black,
-        fontSize: 14,
-        fontWeight: "600",
-        marginTop: 4,
+        marginBottom: 10,
     },
     skippedTag: {
         backgroundColor: colors.warning.base,
@@ -720,5 +854,56 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 12,
         textAlignVertical: "top",
+    },
+    dropdownOverlay: {
+        flex: 1,
+        backgroundColor: colors.overlay.backdrop,
+    },
+    dropdownMenu: {
+        position: "absolute",
+        backgroundColor: colors.white,
+        borderRadius: 12,
+        minWidth: 200,
+        paddingVertical: 2,
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 10,
+        overflow: "hidden",
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.2,
+                shadowRadius: 16,
+            },
+            android: {
+                elevation: 10,
+            },
+        }),
+    },
+    dropdownItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        backgroundColor: colors.white,
+    },
+    dropdownItemPressed: {
+        backgroundColor: colors.gray[100],
+    },
+    dropdownItemText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: colors.text.title,
+        flex: 1,
+    },
+    dropdownDivider: {
+        height: 1,
+        backgroundColor: colors.gray[100],
+        marginHorizontal: 8,
+        marginVertical: 0,
     },
 });

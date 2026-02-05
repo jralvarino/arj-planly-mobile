@@ -1,13 +1,9 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { RectButton } from "react-native-gesture-handler";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Button, Dialog, Portal } from "react-native-paper";
-import Reanimated, { SharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { CategoryFilter } from "../../components/CategoryFilter";
 import { HabitCard } from "../../components/habit/HabitCard";
-import { Habit } from "../../models/Habit";
 import { colors } from "../../theme/colors";
 import type { FilterType } from "../../viewmodels/habit/useHabitsViewModel";
 import { useHabitsViewModel } from "../../viewmodels/habit/useHabitsViewModel";
@@ -25,7 +21,6 @@ export default function HabitsListScreen() {
         selectedCategoryId,
         loading,
         filter,
-        swipeableRefs,
         deleteDialogVisible,
         habitToDelete,
         setFilter,
@@ -50,41 +45,6 @@ export default function HabitsListScreen() {
         },
         [setFilter]
     );
-
-    const renderRightActions = (habit: Habit, progress: SharedValue<number>) => {
-        const animatedStyle = useAnimatedStyle(() => {
-            const translateX = (1 - progress.value) * 100;
-            return {
-                transform: [{ translateX: withSpring(translateX) }],
-            };
-        });
-
-        return (
-            <View style={styles.rightActions}>
-                <Reanimated.View style={[styles.actionContainer, animatedStyle]}>
-                    <RectButton style={[styles.actionButton, styles.editButton]} onPress={() => handleEdit(habit)}>
-                        <MaterialCommunityIcons name="pencil" size={24} color={colors.white} />
-                        <Text style={styles.actionText}>Edit</Text>
-                    </RectButton>
-                    <RectButton
-                        style={[styles.actionButton, styles.disableButton]}
-                        onPress={() => handleDisable(habit)}
-                    >
-                        <MaterialCommunityIcons
-                            name={habit.active ? "eye-off" : "eye"}
-                            size={24}
-                            color={colors.white}
-                        />
-                        <Text style={styles.actionText}>{habit.active ? "Disable" : "Enable"}</Text>
-                    </RectButton>
-                    <RectButton style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(habit)}>
-                        <MaterialCommunityIcons name="delete" size={24} color={colors.white} />
-                        <Text style={styles.actionText}>Delete</Text>
-                    </RectButton>
-                </Reanimated.View>
-            </View>
-        );
-    };
 
     if (loading) {
         return (
@@ -157,24 +117,18 @@ export default function HabitsListScreen() {
                 data={habits}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                    <Swipeable
-                        key={item.id}
-                        // @ts-expect-error - ReanimatedSwipeable ref accepts callback function
-                        ref={(ref) => {
-                            swipeableRefs.current[item.id] = ref;
-                        }}
-                        renderRightActions={(progress) => renderRightActions(item, progress)}
-                        overshootRight={false}
-                    >
-                        <TouchableOpacity onPress={() => handleHabitPress(item.id)}>
-                            <HabitCard habit={item} />
-                        </TouchableOpacity>
-                    </Swipeable>
+                    <HabitCard
+                        habit={item}
+                        onEdit={handleEdit}
+                        onDisable={handleDisable}
+                        onDelete={handleDelete}
+                        onPress={() => handleHabitPress(item.id)}
+                    />
                 )}
                 contentContainerStyle={[styles.listContent, habits.length === 0 && styles.listContentEmpty]}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="clipboard-list-outline" size={64} color={colors.gray[300]} />
+                        <Ionicons name="clipboard-outline" size={64} color={colors.gray[300]} />
                         <Text style={styles.emptyText}>No habits found</Text>
                         <Text style={styles.emptySubtext}>Create your first habit to get started</Text>
                     </View>
@@ -313,37 +267,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.text.body,
         textAlign: "center",
-    },
-    rightActions: {
-        width: 240,
-        flexDirection: "row",
-        marginBottom: 12,
-        borderRadius: 12,
-        overflow: "hidden",
-    },
-    actionContainer: {
-        flex: 1,
-        flexDirection: "row",
-    },
-    actionButton: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingVertical: 16,
-    },
-    editButton: {
-        backgroundColor: colors.primary,
-    },
-    disableButton: {
-        backgroundColor: colors.warning.dark,
-    },
-    deleteButton: {
-        backgroundColor: colors.error,
-    },
-    actionText: {
-        color: colors.white,
-        fontSize: 12,
-        fontWeight: "600",
-        marginTop: 4,
     },
 });

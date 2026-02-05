@@ -1,18 +1,83 @@
 import { colors } from "@/theme/colors";
-import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import { Habit } from "../../models/Habit";
 import { useHabitCardViewModel } from "../../viewmodels/habit/useHabitCardViewModel";
 
 interface HabitCardProps {
     habit: Habit;
+    onEdit?: (habit: Habit) => void;
+    onDisable?: (habit: Habit) => void;
+    onDelete?: (habit: Habit) => void;
+    onPress?: () => void;
 }
 
-export function HabitCard({ habit }: HabitCardProps) {
+export function HabitCard({ habit, onEdit, onDisable, onDelete, onPress }: HabitCardProps) {
+    const router = useRouter();
+    const swipeableRef = useRef<Swipeable>(null);
+    const moreButtonRef = useRef<View>(null);
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+
     const { formattedPeriodType, formattedSelectedDates, formattedStartDate, formattedEndDate, goalText, isInactive } =
         useHabitCardViewModel({ habit });
 
-    return (
+    const handleToggleMenu = useCallback(() => {
+        if (!isMenuVisible && moreButtonRef.current) {
+            moreButtonRef.current.measure((_x, _y, _width, height, _pageX, pageY) => {
+                setMenuPosition({ x: 0, y: pageY + height });
+                setIsMenuVisible(true);
+            });
+        } else {
+            setIsMenuVisible(false);
+        }
+    }, [isMenuVisible]);
+
+    const handleCloseMenu = useCallback(() => {
+        setIsMenuVisible(false);
+        swipeableRef.current?.close();
+    }, []);
+
+    const handleMenuOptionEdit = useCallback(() => {
+        handleCloseMenu();
+        onEdit?.(habit);
+    }, [habit, onEdit, handleCloseMenu]);
+
+    const handleMenuOptionDisable = useCallback(() => {
+        handleCloseMenu();
+        onDisable?.(habit);
+    }, [habit, onDisable, handleCloseMenu]);
+
+    const handleMenuOptionStatistics = useCallback(() => {
+        handleCloseMenu();
+        router.push({
+            pathname: "/(tabs)/statistics",
+            params: { habitId: habit.id },
+        });
+    }, [habit.id, router, handleCloseMenu]);
+
+    const handleMenuOptionDelete = useCallback(() => {
+        handleCloseMenu();
+        onDelete?.(habit);
+    }, [habit, onDelete, handleCloseMenu]);
+
+    const renderRightActions = useCallback(() => {
+        return (
+            <View style={styles.rightAction}>
+                <View ref={moreButtonRef} collapsable={false} style={styles.moreButtonContainer}>
+                    <Pressable style={styles.moreButton} onPress={handleToggleMenu}>
+                        <Ionicons name="ellipsis-horizontal" size={24} color={colors.text.body} />
+                        <Text style={styles.moreButtonText}>Options</Text>
+                    </Pressable>
+                </View>
+            </View>
+        );
+    }, [handleToggleMenu]);
+
+    const cardContent = (
         <View style={[styles.card, { borderLeftColor: habit.color }]}>
             {isInactive && (
                 <View style={styles.inactiveBadge}>
@@ -20,9 +85,7 @@ export function HabitCard({ habit }: HabitCardProps) {
                 </View>
             )}
             <View style={styles.header}>
-                <View style={styles.emojiContainer}>
-                    {<Text style={styles.emoji}>{habit.emoji}</Text>}
-                </View>
+                <View style={styles.emojiContainer}>{<Text style={styles.emoji}>{habit.emoji}</Text>}</View>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title}>{habit.title}</Text>
                     {habit.description && <Text style={styles.description}>{habit.description}</Text>}
@@ -52,6 +115,76 @@ export function HabitCard({ habit }: HabitCardProps) {
                 </View>
             </View>
         </View>
+    );
+
+    return (
+        <>
+            <Swipeable
+                ref={swipeableRef}
+                renderRightActions={renderRightActions}
+                enabled={true}
+                overshootRight={false}
+                overshootLeft={false}
+                rightThreshold={40}
+                friction={2}
+            >
+                <Pressable onPress={onPress}>{cardContent}</Pressable>
+            </Swipeable>
+
+            <Modal visible={isMenuVisible} transparent={true} animationType="fade" onRequestClose={handleCloseMenu}>
+                <Pressable style={styles.dropdownOverlay} onPress={handleCloseMenu}>
+                    <View style={[styles.dropdownMenu, { top: menuPosition.y, right: 10 }]}>
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionEdit}
+                        >
+                            <Text style={styles.dropdownItemText}>Edit</Text>
+                            <Ionicons name="create-outline" size={18} color={colors.text.body} />
+                        </Pressable>
+
+                        <View style={styles.dropdownDivider} />
+
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionDisable}
+                        >
+                            <Text style={styles.dropdownItemText}>{habit.active ? "Disable" : "Enable"}</Text>
+                            <Ionicons
+                                name={habit.active ? "eye-off-outline" : "eye-outline"}
+                                size={18}
+                                color={colors.text.body}
+                            />
+                        </Pressable>
+
+                        <View style={styles.dropdownDivider} />
+
+                        <Pressable
+                            style={({ pressed }) => [styles.dropdownItem, pressed && styles.dropdownItemPressed]}
+                            onPress={handleMenuOptionStatistics}
+                        >
+                            <Text style={styles.dropdownItemText}>Statistics</Text>
+                            <Ionicons name="stats-chart-outline" size={18} color={colors.text.body} />
+                        </Pressable>
+
+                        {onDelete && (
+                            <>
+                                <View style={styles.dropdownDivider} />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.dropdownItem,
+                                        pressed && styles.dropdownItemPressed,
+                                    ]}
+                                    onPress={handleMenuOptionDelete}
+                                >
+                                    <Text style={styles.dropdownItemText}>Delete</Text>
+                                    <Ionicons name="trash-outline" size={18} color={colors.text.body} />
+                                </Pressable>
+                            </>
+                        )}
+                    </View>
+                </Pressable>
+            </Modal>
+        </>
     );
 }
 
@@ -138,5 +271,81 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: colors.text.body,
         marginHorizontal: 4,
+    },
+    rightAction: {
+        width: 80,
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "stretch",
+        marginBottom: 12,
+    },
+    moreButtonContainer: {
+        alignSelf: "stretch",
+    },
+    moreButton: {
+        backgroundColor: colors.gray[200],
+        justifyContent: "center",
+        alignItems: "center",
+        width: 80,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        height: "100%",
+    },
+    moreButtonText: {
+        color: colors.text.body,
+        fontSize: 12,
+        fontWeight: "500",
+        marginTop: 4,
+    },
+    dropdownOverlay: {
+        flex: 1,
+        backgroundColor: colors.overlay.backdrop,
+    },
+    dropdownMenu: {
+        position: "absolute",
+        backgroundColor: colors.white,
+        borderRadius: 12,
+        minWidth: 200,
+        paddingVertical: 2,
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 10,
+        overflow: "hidden",
+        ...Platform.select({
+            ios: {
+                shadowColor: colors.shadow,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.2,
+                shadowRadius: 16,
+            },
+            android: {
+                elevation: 10,
+            },
+        }),
+    },
+    dropdownItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        backgroundColor: colors.white,
+    },
+    dropdownItemPressed: {
+        backgroundColor: colors.gray[100],
+    },
+    dropdownItemText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: colors.text.title,
+        flex: 1,
+    },
+    dropdownDivider: {
+        height: 1,
+        backgroundColor: colors.gray[100],
+        marginHorizontal: 8,
+        marginVertical: 0,
     },
 });

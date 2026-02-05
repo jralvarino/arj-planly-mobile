@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import moment from "moment";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -41,6 +41,8 @@ function sortHabitsByCompletedAt(habits: HabitForSelectedDate[]): HabitForSelect
 }
 
 export default function StatisticsScreen() {
+    const { habitId } = useLocalSearchParams<{ habitId?: string }>();
+
     const {
         selectedDate,
         selectedCategoryId,
@@ -55,7 +57,7 @@ export default function StatisticsScreen() {
         handleCategorySelect,
         handleHabitSelect,
         refetchDashboard,
-    } = useStatisticsViewModel();
+    } = useStatisticsViewModel({ initialHabitId: habitId });
 
     const sortedHabitsForTimeline = useMemo(
         () =>

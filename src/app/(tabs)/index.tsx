@@ -199,7 +199,7 @@ export default function HomeScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
                 }
             />
-            {loading && (
+            {loading && filteredTodos.length > 0 && (
                 <View style={styles.loadingOverlay}>
                     <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={styles.loadingText}>Loading todos...</Text>

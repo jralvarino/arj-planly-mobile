@@ -1,18 +1,14 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Toast from "react-native-toast-message";
+import type { Category } from "../../models/Category";
 import { Habit } from "../../models/Habit";
+import { getAllCategories } from "../../service/category.service";
+import { deleteHabit, getAllHabits, updateHabit } from "../../service/habit.service";
+import { cancelHabitReminders, scheduleHabitReminders } from "../../service/notification.service";
 import { useHomeStore } from "../../stores/homeStore";
 import { useStreakStore } from "../../stores/streakStore";
-import {
-    cancelHabitReminders,
-    scheduleHabitReminders,
-} from "../../service/notification.service";
-import { deleteHabit, getAllHabits, updateHabit } from "../../service/habit.service";
-import { getAllCategories } from "../../service/category.service";
-import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import type { Category } from "../../models/Category";
 
 export type FilterType = "all" | "active" | "inactive";
 
@@ -25,7 +21,6 @@ export function useHabitsViewModel() {
     const [filter, setFilter] = useState<FilterType>("active");
     const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
     const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
-    const swipeableRefs = useRef<{ [id: string]: SwipeableMethods | null }>({});
 
     const fetchHabits = useCallback(async () => {
         try {
@@ -76,20 +71,15 @@ export function useHabitsViewModel() {
 
     const handleEdit = useCallback(
         (habit: Habit) => {
-            swipeableRefs.current[habit.id]?.close();
             router.push(`/habits/${habit.id}`);
         },
         [router]
     );
 
-    const handleDelete = useCallback(
-        (habit: Habit) => {
-            swipeableRefs.current[habit.id]?.close();
-            setHabitToDelete(habit);
-            setDeleteDialogVisible(true);
-        },
-        []
-    );
+    const handleDelete = useCallback((habit: Habit) => {
+        setHabitToDelete(habit);
+        setDeleteDialogVisible(true);
+    }, []);
 
     const confirmDelete = useCallback(async () => {
         if (!habitToDelete) return;
@@ -119,11 +109,10 @@ export function useHabitsViewModel() {
 
     const handleDisable = useCallback(
         async (habit: Habit) => {
-            swipeableRefs.current[habit.id]?.close();
             try {
                 const newActiveStatus = !habit.active;
                 const updateData: Partial<Habit> = { active: newActiveStatus };
-                
+
                 // Se está sendo desativado, define end_date como hoje
                 if (!newActiveStatus) {
                     const today = new Date().toISOString().split("T")[0];
@@ -132,7 +121,7 @@ export function useHabitsViewModel() {
                     // Se está sendo reativado, remove o end_date
                     updateData.end_date = undefined;
                 }
-                
+
                 const updatedHabit = await updateHabit(habit.id, updateData);
                 await cancelHabitReminders(habit.id);
                 if (newActiveStatus && updatedHabit.reminder_enabled) {
@@ -171,7 +160,6 @@ export function useHabitsViewModel() {
         selectedCategoryId,
         loading,
         filter,
-        swipeableRefs,
         deleteDialogVisible,
         habitToDelete,
 

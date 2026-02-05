@@ -55,12 +55,16 @@ const groupConsecutiveDates = (dates: string[]): string[][] => {
     return groups;
 };
 
-export function useStatisticsViewModel() {
+interface UseStatisticsViewModelProps {
+    initialHabitId?: string;
+}
+
+export function useStatisticsViewModel({ initialHabitId }: UseStatisticsViewModelProps = {}) {
     const today = formatDate(new Date());
     const [selectedDate, setSelectedDate] = useState<string>(today);
     const [currentMonth, setCurrentMonth] = useState<string>(getMonthFromDate(today));
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-    const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+    const [selectedHabitId, setSelectedHabitId] = useState<string | null>(initialHabitId || null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [habits, setHabits] = useState<Habit[]>([]);
     const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
@@ -106,30 +110,32 @@ export function useStatisticsViewModel() {
                     abortController.signal
                 );
 
-            if (!abortController.signal.aborted) {
-                setDashboardData(data);
+                if (!abortController.signal.aborted) {
+                    setDashboardData(data);
+                }
+            } catch (err: unknown) {
+                if (
+                    abortController.signal.aborted ||
+                    (err as { name?: string })?.name === "AbortError" ||
+                    (err as { code?: string })?.code === "ERR_CANCELED"
+                ) {
+                    return;
+                }
+                console.error("Error fetching dashboard:", err);
+                Toast.show({
+                    type: "error",
+                    text1: "Error",
+                    text2: "Failed to load statistics",
+                });
+            } finally {
+                if (!abortController.signal.aborted) {
+                    setLoading(false);
+                }
+                abortControllerRef.current = null;
             }
-        } catch (err: unknown) {
-            if (
-                abortController.signal.aborted ||
-                (err as { name?: string })?.name === "AbortError" ||
-                (err as { code?: string })?.code === "ERR_CANCELED"
-            ) {
-                return;
-            }
-            console.error("Error fetching dashboard:", err);
-            Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: "Failed to load statistics",
-            });
-        } finally {
-            if (!abortController.signal.aborted) {
-                setLoading(false);
-            }
-            abortControllerRef.current = null;
-        }
-    }, []);
+        },
+        []
+    );
 
     const handleDayPress = useCallback((day: DateData) => {
         setSelectedDate(day.dateString);
