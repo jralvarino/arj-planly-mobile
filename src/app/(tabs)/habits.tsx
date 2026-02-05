@@ -119,6 +119,7 @@ export default function HabitsListScreen() {
                 renderItem={({ item }) => (
                     <HabitCard
                         habit={item}
+                        categoryName={categories.find((c) => c.id === item.categoryId)?.name}
                         onEdit={handleEdit}
                         onDisable={handleDisable}
                         onDelete={handleDelete}

@@ -9,13 +9,14 @@ import { useHabitCardViewModel } from "../../viewmodels/habit/useHabitCardViewMo
 
 interface HabitCardProps {
     habit: Habit;
+    categoryName?: string;
     onEdit?: (habit: Habit) => void;
     onDisable?: (habit: Habit) => void;
     onDelete?: (habit: Habit) => void;
     onPress?: () => void;
 }
 
-export function HabitCard({ habit, onEdit, onDisable, onDelete, onPress }: HabitCardProps) {
+export function HabitCard({ habit, categoryName, onEdit, onDisable, onDelete, onPress }: HabitCardProps) {
     const router = useRouter();
     const swipeableRef = useRef<Swipeable>(null);
     const moreButtonRef = useRef<View>(null);
@@ -78,22 +79,34 @@ export function HabitCard({ habit, onEdit, onDisable, onDelete, onPress }: Habit
     }, [handleToggleMenu]);
 
     const cardContent = (
-        <View style={[styles.card, { borderLeftColor: habit.color }]}>
+        <View style={styles.card}>
             {isInactive && (
                 <View style={styles.inactiveBadge}>
                     <Text style={styles.inactiveText}>Inactive</Text>
                 </View>
             )}
             <View style={styles.header}>
-                <View style={styles.emojiContainer}>{<Text style={styles.emoji}>{habit.emoji}</Text>}</View>
+                <View style={styles.emojiColumn}>
+                    <View style={[styles.emojiContainer, { backgroundColor: habit.color }]}>
+                        <Text style={styles.emoji}>{habit.emoji}</Text>
+                    </View>
+                </View>
                 <View style={styles.titleContainer}>
                     <Text style={styles.title}>{habit.title}</Text>
-                    {habit.description && <Text style={styles.description}>{habit.description}</Text>}
+                    {categoryName ? (
+                <View style={styles.categoryTagRight}>
+                    <Text style={styles.categoryTagText}>{categoryName}</Text>
                 </View>
+            ) : null}      
+                    
+                </View>
+          
             </View>
             <View style={styles.details}>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Goal:</Text>
+                    <Text style={styles.detailLabel}>Time:</Text>
+                    <Text style={styles.detailValue}>{habit.period}</Text>
+                    <Text style={styles.detailSeparator}> · </Text>
                     <Text style={styles.detailValue}>{goalText}</Text>
                 </View>
                 <View style={styles.detailRow}>
@@ -102,10 +115,6 @@ export function HabitCard({ habit, onEdit, onDisable, onDelete, onPress }: Habit
                         {formattedPeriodType}
                         {formattedSelectedDates ? ` (${formattedSelectedDates})` : ""}
                     </Text>
-                </View>
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Time:</Text>
-                    <Text style={styles.detailValue}>{habit.period}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Start Date:</Text>
@@ -194,7 +203,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginBottom: 12,
-        borderLeftWidth: 4,
+        borderWidth: 1,
+        borderColor: colors.gray[200],
         position: "relative",
         ...Platform.select({
             ios: {
@@ -213,11 +223,24 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         marginBottom: 12,
     },
-    emojiContainer: {
+    emojiColumn: {
         marginRight: 12,
+        alignItems: "center",
+    },
+    emojiContainer: {
+        padding: 7,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
     },
     emoji: {
         fontSize: 32,
+    },
+    colorDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginTop: 6,
     },
     titleContainer: {
         flex: 1,
@@ -229,7 +252,20 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     description: {
-        fontSize: 14,
+        fontSize: 12,
+        color: colors.text.body,
+    },
+    categoryTagRight: {
+        backgroundColor: colors.gray[100],
+        paddingHorizontal: 8,
+        height: 20,
+        borderRadius: 999,
+        alignSelf: "flex-start",
+        justifyContent: "center",
+    },
+    categoryTagText: {
+        fontSize: 11,
+        fontWeight: "600",
         color: colors.text.body,
     },
     inactiveBadge: {
