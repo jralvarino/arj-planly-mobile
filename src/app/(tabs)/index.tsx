@@ -149,7 +149,7 @@ export default function HomeScreen() {
             return (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.errorText}>Error: {error}</Text>
-                    <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
+                    <TouchableOpacity onPress={() => handleRefresh(selectedDate)} style={styles.retryButton}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
@@ -196,7 +196,11 @@ export default function HomeScreen() {
                 ]}
                 ListEmptyComponent={renderEmpty}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => handleRefresh(selectedDate)}
+                        tintColor={colors.primary}
+                    />
                 }
             />
             {loading && filteredTodos.length > 0 && (

@@ -118,21 +118,24 @@ export function useTodoViewModel() {
         [sortTodos]
     );
 
-    const handleRefresh = useCallback(async () => {
-        setRefreshing(true);
-        const today = getTodayDate();
-        try {
-            setError(null);
-            const data = await getTodosByDate(today);
-            const sortedData = sortTodos(data);
-            setTodos(sortedData);
-            todosRef.current = sortedData;
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to fetch todos");
-        } finally {
-            setRefreshing(false);
-        }
-    }, [sortTodos]);
+    const handleRefresh = useCallback(
+        async (date?: string) => {
+            setRefreshing(true);
+            const targetDate = date || getTodayDate();
+            try {
+                setError(null);
+                const data = await getTodosByDate(targetDate);
+                const sortedData = sortTodos(data);
+                setTodos(sortedData);
+                todosRef.current = sortedData;
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to fetch todos");
+            } finally {
+                setRefreshing(false);
+            }
+        },
+        [sortTodos]
+    );
 
     const fetchCategories = useCallback(async () => {
         try {
@@ -169,8 +172,7 @@ export function useTodoViewModel() {
                               ...todo,
                               status: newStatus,
                               progressValue,
-                              completedAt:
-                                  newStatus === TODO_STATUS.DONE ? new Date().toISOString() : undefined,
+                              completedAt: newStatus === TODO_STATUS.DONE ? new Date().toISOString() : undefined,
                           }
                         : todo
                 );

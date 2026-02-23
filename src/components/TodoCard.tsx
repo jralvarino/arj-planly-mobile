@@ -87,12 +87,12 @@ export function TodoCard({
         };
     });
 
-    // Atualiza o estado local quando o todo prop muda
+    // Atualiza o estado local quando o todo prop muda (inclui targetValue e outras mudanças)
     useEffect(() => {
         setLocalTodo(todo);
         setModalStatus(todo.status);
         setModalProgressValue(todo.progressValue);
-    }, [todo.id, todo.status, todo.progressValue]);
+    }, [todo]);
 
     const progress = localTodo.targetValue
         ? parseFloat(localTodo.progressValue || "0") / parseFloat(localTodo.targetValue)
