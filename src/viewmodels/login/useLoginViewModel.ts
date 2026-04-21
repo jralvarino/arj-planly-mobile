@@ -7,7 +7,7 @@ import { useAuthStore } from "../../stores/authStore";
 
 export function useLoginViewModel() {
     const router = useRouter();
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -15,12 +15,11 @@ export function useLoginViewModel() {
     const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
 
     const handleLogin = useCallback(async () => {
-        // Validation
-        if (!username.trim()) {
+        if (!email.trim()) {
             Toast.show({
                 type: "error",
                 text1: "Validation Error",
-                text2: "Please enter your username.",
+                text2: "Please enter your email.",
             });
             return;
         }
@@ -37,21 +36,18 @@ export function useLoginViewModel() {
         setLoading(true);
         try {
             const loginData: LoginHttpParams = {
-                user: username.trim(),
+                email: email.trim(),
                 password: password,
             };
 
             await login(loginData);
 
-            // Update authentication store
             setAuthenticated();
 
-            // Navigate to main screen after successful login
             router.replace("/(tabs)");
         } catch (error: any) {
             console.log("Login error:", error);
 
-            // Get error message - can come from backend (error.response?.data?.message) or be a generic message
             let errorMessage = "Invalid credentials. Please try again.";
 
             if (error.response?.data?.message) {
@@ -68,21 +64,18 @@ export function useLoginViewModel() {
         } finally {
             setLoading(false);
         }
-    }, [username, password, setAuthenticated, router]);
+    }, [email, password, setAuthenticated, router]);
 
     const toggleShowPassword = useCallback(() => {
         setShowPassword((prev) => !prev);
     }, []);
 
     return {
-        // State
-        username,
+        email,
         password,
         loading,
         showPassword,
-
-        // Actions
-        setUsername,
+        setEmail,
         setPassword,
         handleLogin,
         toggleShowPassword,

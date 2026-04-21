@@ -2,14 +2,18 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import { tokenStorage } from "../service/tokenStorage";
 
-const getBaseURL = () => {
+const getPlanlyBaseURL = () => {
     return Platform.select({
         ios: "https://1trlwwn164.execute-api.us-east-1.amazonaws.com/prod",
         android: "http://localhost:3000",
     });
 };
 
-export const baseURL = getBaseURL();
+// URL do arj-auth-service — atualize com a URL do deploy após rodar `sam deploy`
+const ARJ_AUTH_BASE_URL =
+    process.env.EXPO_PUBLIC_ARJ_AUTH_URL ?? "https://arj-auth.execute-api.us-east-1.amazonaws.com/prod";
+
+export const baseURL = getPlanlyBaseURL();
 
 export class PlanlyApiClient {
     private instance: AxiosInstance;
@@ -43,3 +47,8 @@ export class PlanlyApiClient {
 }
 
 export const planlyApiClient = new PlanlyApiClient().getInstance();
+
+export const arjAuthClient = axios.create({
+    baseURL: ARJ_AUTH_BASE_URL,
+    headers: { "Content-Type": "application/json" },
+});

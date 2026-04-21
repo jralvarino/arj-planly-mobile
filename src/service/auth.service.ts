@@ -1,17 +1,10 @@
 import { LoginHttpParams } from "@/interfaces/http/LoginHttpParams";
 import { AuthResponse } from "@/interfaces/http/LoginHttpResponse";
-import CryptoJS from "crypto-js";
-import { planlyApiClient } from "../api/planly-api";
+import { arjAuthClient } from "../api/planly-api";
 import { tokenStorage } from "./tokenStorage";
 
-const hashPassword = (password: string): string => {
-    return CryptoJS.SHA256(password).toString();
-};
-
 export const login = async (userData: LoginHttpParams): Promise<void> => {
-    userData.password = hashPassword(userData.password);
-
-    const { data } = await planlyApiClient.post<AuthResponse>("/auth/login", userData);
+    const { data } = await arjAuthClient.post<AuthResponse>("/auth/login", userData);
 
     if (!data.token) {
         throw new Error("Token not found in response");

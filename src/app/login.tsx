@@ -5,7 +5,7 @@ import { colors } from "../theme/colors";
 import { useLoginViewModel } from "../viewmodels/login/useLoginViewModel";
 
 export default function LoginScreen() {
-    const { username, password, loading, showPassword, setUsername, setPassword, handleLogin, toggleShowPassword } =
+    const { email, password, loading, showPassword, setEmail, setPassword, handleLogin, toggleShowPassword } =
         useLoginViewModel();
 
     return (
@@ -20,24 +20,25 @@ export default function LoginScreen() {
 
                     {/* Form */}
                     <View style={styles.form}>
-                        {/* Username Input */}
+                        {/* Email Input */}
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Username</Text>
+                            <Text style={styles.label}>Email</Text>
                             <View style={styles.inputWrapper}>
                                 <Ionicons
-                                    name="person-outline"
+                                    name="mail-outline"
                                     size={20}
                                     color={colors.text.body}
                                     style={styles.inputIcon}
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Enter your username"
+                                    placeholder="Enter your email"
                                     placeholderTextColor={colors.text.body}
-                                    value={username}
-                                    onChangeText={setUsername}
+                                    value={email}
+                                    onChangeText={setEmail}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="email-address"
                                     editable={!loading}
                                 />
                             </View>
