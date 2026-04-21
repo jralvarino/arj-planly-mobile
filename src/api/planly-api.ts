@@ -9,9 +9,8 @@ const getPlanlyBaseURL = () => {
     });
 };
 
-// URL do arj-auth-service — atualize com a URL do deploy após rodar `sam deploy`
 const ARJ_AUTH_BASE_URL =
-    process.env.EXPO_PUBLIC_ARJ_AUTH_URL ?? "https://arj-auth.execute-api.us-east-1.amazonaws.com/prod";
+    process.env.EXPO_PUBLIC_ARJ_AUTH_URL ?? "https://bhn6vxh1s0.execute-api.us-east-1.amazonaws.com/prod";
 
 export const baseURL = getPlanlyBaseURL();
 
