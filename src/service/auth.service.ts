@@ -4,7 +4,7 @@ import { arjAuthClient } from "../api/planly-api";
 import { tokenStorage } from "./tokenStorage";
 
 export const login = async (userData: LoginHttpParams): Promise<void> => {
-    const { data } = await arjAuthClient.post<AuthResponse>("/auth/login", userData);
+    const { data } = await arjAuthClient.post<AuthResponse>("/auth/login", { ...userData, appId: "planly" });
 
     if (!data.token) {
         throw new Error("Token not found in response");

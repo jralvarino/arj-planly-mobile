@@ -38,6 +38,7 @@ export function useLoginViewModel() {
             const loginData: LoginHttpParams = {
                 email: email.trim(),
                 password: password,
+                appId: "planly",
             };
 
             await login(loginData);
