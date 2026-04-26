@@ -2,17 +2,9 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { Platform } from "react-native";
 import { tokenStorage } from "../service/tokenStorage";
 
-const getPlanlyBaseURL = () => {
-    return Platform.select({
-        ios: "https://1trlwwn164.execute-api.us-east-1.amazonaws.com/prod",
-        android: "http://localhost:3000",
-    });
-};
+const ARJ_AUTH_BASE_URL = process.env.EXPO_PUBLIC_ARJ_AUTH_URL;
 
-const ARJ_AUTH_BASE_URL =
-    process.env.EXPO_PUBLIC_ARJ_AUTH_URL ?? "https://bhn6vxh1s0.execute-api.us-east-1.amazonaws.com/prod";
-
-export const baseURL = getPlanlyBaseURL();
+export const baseURL = process.env.EXPO_PUBLIC_ARJ_PLANLY_API_URL;
 
 export class PlanlyApiClient {
     private instance: AxiosInstance;
