@@ -11,6 +11,13 @@ A productivity mobile app for managing todos, habits, and categories — built w
 **Backend API:** [arj-planly-api](https://github.com/jralvarino/planly-api)
 
 ---
+## Screenshots
+<p align="center">
+  <img src="assets/screenshots/screen1.png" width="23%">
+  <img src="assets/screenshots/screen2.png" width="23%">
+  <img src="assets/screenshots/screen3.png" width="23%">
+  <img src="assets/screenshots/screen4.png" width="23%">
+</p>
 
 ## Setup
 
